@@ -1,0 +1,8 @@
+const URL=process.env.SUPABASE_URL,KEY=process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
+const j=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{'content-type':'application/json','cache-control':'no-store'}});
+const hd=()=>({'apikey':KEY,'authorization':`Bearer ${KEY}`,'content-type':'application/json'});
+const ok=req=>Boolean(process.env.CLASSIFIEDS_ADMIN_KEY&&(req.headers.get('authorization')||'')===`Bearer ${process.env.CLASSIFIEDS_ADMIN_KEY}`);
+export async function GET(req){if(!ok(req))return j({error:'Unauthorized'},401);const u=new URL(`${URL}/rest/v1/classifieds`);u.searchParams.set('select','*');u.searchParams.set('order','created_at.desc');u.searchParams.set('limit','100');const r=await fetch(u,{headers:hd()});return r.ok?j({items:await r.json()}):j({error:'Could not read queue'},502)}
+export async function PATCH(req){if(!ok(req))return j({error:'Unauthorized'},401);let x;try{x=await req.json()}catch{return j({error:'Invalid JSON'},400)};const id=String(x.id||''),a=String(x.action||'');if(!id||!['approve','reject','feature','unfeature','delete'].includes(a))return j({error:'Invalid action'},400);
+ if(a==='delete'){const r=await fetch(`${URL}/rest/v1/classifieds?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:hd()});return r.ok?j({ok:true}):j({error:'Delete failed'},502)}
+ const patch=a==='approve'?{status:'approved'}:a==='reject'?{status:'rejected'}:a==='feature'?{featured:true}:{featured:false};const r=await fetch(`${URL}/rest/v1/classifieds?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:hd(),body:JSON.stringify(patch)});return r.ok?j({ok:true}):j({error:'Update failed'},502)}
