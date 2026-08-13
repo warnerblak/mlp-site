@@ -348,6 +348,31 @@ img{max-width:100%}
   .canvas-wrap{min-height:300px}
   .contract{display:block}.contract .btn{margin-top:10px;width:100%}
 }
+
+.classified-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.classified-actions .note{font:9px/1.4 "Courier New",monospace;text-transform:uppercase;letter-spacing:.09em;color:var(--soft)}
+.classified.dynamic{min-height:170px;display:flex;flex-direction:column}
+.classified .classified-title{font-size:17px;line-height:1.1;font-weight:500;margin:0 0 8px}
+.classified .classified-body{font:11px/1.48 "Courier New",monospace;margin:0 0 12px}
+.classified .classified-meta{margin-top:auto;padding-top:10px;border-top:1px dotted var(--line2);font:8px/1.45 "Courier New",monospace;text-transform:uppercase;color:var(--soft)}
+.classified .classified-link{display:inline-block;margin-top:8px;font:700 8px/1 "Courier New",monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--red)}
+.classified-empty{grid-column:1/-1;padding:25px 0;font:10px/1.5 "Courier New",monospace;text-transform:uppercase;color:var(--soft)}
+.modal{position:fixed;inset:0;z-index:1000;display:none;place-items:center;background:rgba(24,20,16,.72);padding:18px}
+.modal.open{display:grid}
+.modal-card{width:min(680px,100%);max-height:min(820px,92vh);overflow:auto;background:var(--paper);border:2px solid var(--ink);box-shadow:0 30px 90px rgba(0,0,0,.3)}
+.modal-head{display:flex;justify-content:space-between;gap:12px;align-items:start;padding:15px 16px;border-bottom:2px solid var(--ink)}
+.modal-head h3{font-size:34px;line-height:1;margin:2px 0 0;font-weight:500}
+.icon-btn{border:1px solid var(--ink);background:transparent;width:34px;height:34px;cursor:pointer;font:700 16px "Courier New",monospace}
+.form-body{padding:16px}.field{margin-bottom:14px}
+.field label{display:block;margin-bottom:6px;font:700 9px "Courier New",monospace;text-transform:uppercase;letter-spacing:.09em}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--ink);border-radius:0;background:var(--paper2);color:var(--ink);padding:11px;font:12px/1.35 "Courier New",monospace;outline:none}
+.field textarea{min-height:120px;resize:vertical}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.char-count{text-align:right;margin-top:4px;font:8px "Courier New",monospace;color:var(--soft);text-transform:uppercase}
+.form-foot{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;padding-top:13px;border-top:1px solid var(--ink)}
+.form-status{font:9px/1.4 "Courier New",monospace;text-transform:uppercase;color:var(--soft);max-width:420px}.form-status.error{color:var(--red)}.form-status.success{color:#315b33}
+.admin-link{display:inline-block;margin-top:10px;font:8px "Courier New",monospace;text-transform:uppercase;color:var(--soft)}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.modal{padding:0}.modal-card{width:100%;height:100%;max-height:none;border:0}}
+
 </style>
 </head>
 <body>
@@ -379,6 +404,7 @@ img{max-width:100%}
   <nav class="nav">
     <a href="#printer">The Printer</a>
     <a href="#operators">Operators</a>
+    <a href="#classifieds">Classifieds</a>
     <a href="#archive">Archive</a>
     <a href="#mlpify">MLPIFY</a>
     <a href="#links">Official Links</a>
@@ -447,16 +473,15 @@ img{max-width:100%}
       <div class="load-row"><button id="loadMore" class="btn dark">Load more operators</button></div>
     </section>
 
-    <section class="section">
-      <div class="classified-head">Classifieds</div>
-      <div class="classified-grid">
-        <div class="classified"><h3>Wanted</h3><p>Artist seeking developer. Serious weirdos only. Inquire within.</p></div>
-        <div class="classified"><h3>Seeking</h3><p>Rare Remilia lore. Documentation and screenshots appreciated.</p></div>
-        <div class="classified"><h3>Public notice</h3><p>620 operators. One machine. No surprise mint required.</p></div>
-        <div class="classified"><h3>Conditions</h3><p>CHAOTIC.<br>100% chance of posting.<br>Printer remains online.</p></div>
-        <div class="classified"><h3>Corrections</h3><p>Yesterday's report that everyone logged off was incorrect.</p></div>
-      </div>
-    </section>
+    <section class="section" id="classifieds">
+  <div class="classified-head">Classifieds</div>
+  <div class="classified-actions">
+    <div><div class="eyebrow" style="color:var(--soft)">Community bulletin board</div><div class="note">Approved notices print here until they expire.</div></div>
+    <button id="postClassifiedBtn" class="btn dark" type="button">Post a classified</button>
+  </div>
+  <div id="classifiedGrid" class="classified-grid"><div class="classified-empty">Loading approved classifieds…</div></div>
+  <a class="admin-link" href="/admin.html">Operator desk / moderation →</a>
+</section>
 
     <div class="sheet-mark"><span>Sheet 001-C</span><span>permanent file</span></div>
 
@@ -544,6 +569,34 @@ img{max-width:100%}
     <span>miladylineprinter.xyz / @mlp_eth</span>
   </footer>
 </main>
+
+<div id="classifiedModal" class="modal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="classifiedModalTitle">
+    <div class="modal-head">
+      <div><div class="eyebrow">Community desk / submission</div><h3 id="classifiedModalTitle">Post a classified</h3></div>
+      <button id="closeClassifiedModal" class="icon-btn" type="button" aria-label="Close">×</button>
+    </div>
+    <form id="classifiedForm" class="form-body">
+      <div class="form-grid">
+        <div class="field"><label>Section</label><select id="classifiedCategory" required>
+          <option value="wanted">Wanted</option><option value="for-sale">For sale</option><option value="seeking">Seeking</option>
+          <option value="help-wanted">Help wanted</option><option value="public-notice">Public notice</option><option value="personals">Personals</option>
+        </select></div>
+        <div class="field"><label>Run for</label><select id="classifiedExpires"><option value="7">7 days</option><option value="14">14 days</option></select></div>
+      </div>
+      <div class="field"><label>Headline</label><input id="classifiedHeadline" maxlength="70" required placeholder="Artist seeking developer"><div class="char-count"><span id="headlineCount">0</span>/70</div></div>
+      <div class="field"><label>Copy</label><textarea id="classifiedBody" maxlength="320" required placeholder="Keep it brief. Newspaper space is expensive."></textarea><div class="char-count"><span id="bodyCount">0</span>/320</div></div>
+      <div class="form-grid">
+        <div class="field"><label>Remilia / X handle</label><input id="classifiedHandle" maxlength="64" placeholder="@username"></div>
+        <div class="field"><label>Reply / source URL</label><input id="classifiedLink" maxlength="400" placeholder="https://..."></div>
+      </div>
+      <div class="form-foot">
+        <div id="classifiedFormStatus" class="form-status">All submissions enter moderation before printing. RemiliaNET authentication will be added after client approval.</div>
+        <button id="classifiedSubmitBtn" class="btn dark" type="submit">Send to press →</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script>
 /* ============================================================
@@ -799,6 +852,44 @@ document.querySelectorAll('.story,.transmission,.section').forEach(x=>observer.o
 
 loadOperatorOnDuty();
 loadMore();
+
+const classifiedLabels={'wanted':'Wanted','for-sale':'For sale','seeking':'Seeking','help-wanted':'Help wanted','public-notice':'Public notice','personals':'Personals'};
+function validClassifiedUrl(v){if(!v)return'';try{const u=new URL(v,location.origin);return ['http:','https:'].includes(u.protocol)?u.href:''}catch{return''}}
+function cfDate(v){try{return new Date(v).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toUpperCase()}catch{return''}}
+function classifiedHTML(c){
+  const u=validClassifiedUrl(c.url);
+  return `<article class="classified dynamic"><h3>${escapeHtml(classifiedLabels[c.category]||c.category||'Notice')}</h3>
+  <h4 class="classified-title">${escapeHtml(c.headline||'Untitled notice')}</h4><p class="classified-body">${escapeHtml(c.body||'')}</p>
+  <div class="classified-meta">${c.handle?escapeHtml(c.handle)+' · ':''}PRINTED ${cfDate(c.created_at)}${c.expires_at?' · EXPIRES '+cfDate(c.expires_at):''}
+  ${u?`<br><a class="classified-link" href="${u}" target="_blank" rel="noopener">Reply / source →</a>`:''}</div></article>`;
+}
+async function loadClassifieds(){
+  const grid=document.getElementById('classifiedGrid');
+  try{
+    const r=await fetch('/api/classifieds'); if(!r.ok)throw new Error();
+    const d=await r.json();
+    grid.innerHTML=d.items?.length?d.items.map(classifiedHTML).join(''):'<div class="classified-empty">No approved classifieds are currently on press. Be the first to submit one.</div>';
+  }catch{grid.innerHTML='<div class="classified-empty">Classified desk is not connected yet. Configure the database to activate submissions.</div>'}
+}
+const cfModal=document.getElementById('classifiedModal');
+function openCF(){cfModal.classList.add('open');cfModal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
+function closeCF(){cfModal.classList.remove('open');cfModal.setAttribute('aria-hidden','true');document.body.style.overflow=''}
+document.getElementById('postClassifiedBtn').onclick=openCF;document.getElementById('closeClassifiedModal').onclick=closeCF;
+cfModal.addEventListener('click',e=>{if(e.target===cfModal)closeCF()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCF()});
+document.getElementById('classifiedHeadline').addEventListener('input',e=>headlineCount.textContent=e.target.value.length);
+document.getElementById('classifiedBody').addEventListener('input',e=>bodyCount.textContent=e.target.value.length);
+document.getElementById('classifiedForm').addEventListener('submit',async e=>{
+  e.preventDefault();const s=document.getElementById('classifiedFormStatus'),b=document.getElementById('classifiedSubmitBtn');
+  const payload={category:classifiedCategory.value,days:Number(classifiedExpires.value),headline:classifiedHeadline.value.trim(),body:classifiedBody.value.trim(),handle:classifiedHandle.value.trim(),url:classifiedLink.value.trim()};
+  s.className='form-status';s.textContent='Sending to the moderation desk…';b.disabled=true;
+  try{
+    const r=await fetch('/api/classifieds',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);
+    s.className='form-status success';s.textContent='Received. Your classified is pending editorial approval.';e.target.reset();headlineCount.textContent='0';bodyCount.textContent='0';setTimeout(closeCF,1400)
+  }catch(err){s.className='form-status error';s.textContent=err.message||'Submission failed'}finally{b.disabled=false}
+});
+loadClassifieds();
+
 </script>
 </body>
 </html>
