@@ -1,19 +1,6 @@
 const X_API_URL =
   "https://api.x.com/2/tweets/search/recent";
 
-/*
-  CULTURAL WIRE V2
-
-  PRIMARY WIRE
-  Verified against official Remilia/Milady web properties.
-
-  You can add more accounts later in Vercel with:
-  X_CULTURAL_WIRE_ACCOUNTS
-
-  Example value:
-  RemiliaCorp333,MiladyMaker333,AnotherAccount
-*/
-
 const DEFAULT_PRIMARY_ACCOUNTS = [
   "RemiliaCorp333",
   "MiladyMaker333",
@@ -21,6 +8,29 @@ const DEFAULT_PRIMARY_ACCOUNTS = [
 
 const COMMUNITY_QUERY =
   '("milady maker" OR remilia OR "remilia collective" OR milady) lang:en -is:retweet -is:reply';
+
+const BLOCKED_TERMS = [
+  "retarded",
+  "nigger",
+  "faggot",
+  "kike",
+  "rape",
+  "scam giveaway",
+  "free mint dm",
+];
+
+const STRONG_TERMS = [
+  "remilia",
+  "milady maker",
+  "remilia collective",
+  "milady world",
+  "bonkler",
+  "remilio",
+  "pixelady",
+  "new net art",
+  "network spirituality",
+  "milady",
+];
 
 const json = (
   data,
@@ -32,9 +42,7 @@ const json = (
     headers: {
       "content-type":
         "application/json; charset=utf-8",
-
       "cache-control": "no-store",
-
       ...extraHeaders,
     },
   });
@@ -76,22 +84,61 @@ const primaryQuery = (accounts) => {
   return `(${sources}) -is:retweet -is:reply`;
 };
 
+const containsBlockedTerm = (text = "") => {
+  const haystack =
+    String(text).toLowerCase();
+
+  return BLOCKED_TERMS.some((term) =>
+    haystack.includes(term)
+  );
+};
+
+const relevanceScore = (text = "") => {
+  const haystack =
+    String(text).toLowerCase();
+
+  let score = 0;
+
+  for (const term of STRONG_TERMS) {
+    if (haystack.includes(term)) {
+      score +=
+        term === "milady"
+          ? 4
+          : 8;
+    }
+  }
+
+  if (
+    haystack.includes("derivative") ||
+    haystack.includes("pfp") ||
+    haystack.includes("posting") ||
+    haystack.includes("timeline") ||
+    haystack.includes("culture") ||
+    haystack.includes("meme")
+  ) {
+    score += 3;
+  }
+
+  return score;
+};
+
 const classify = ({
   text = "",
   username = "",
   primary = false,
 }) => {
+  const user =
+    username.toLowerCase();
+
   if (primary) {
     if (
-      username.toLowerCase() ===
-      "remiliacorp333"
+      user === "remiliacorp333"
     ) {
       return "REMILIA";
     }
 
     if (
-      username.toLowerCase() ===
-      "miladymaker333"
+      user === "miladymaker333"
     ) {
       return "MILADY";
     }
@@ -129,10 +176,6 @@ async function searchX(
     query
   );
 
-  /*
-    X Recent Search requires at least 10.
-    We'll filter aggressively after retrieval.
-  */
   url.searchParams.set(
     "max_results",
     "10"
@@ -290,12 +333,6 @@ async function searchX(
   });
 }
 
-/*
-  Editorial ranking.
-
-  Primary Remilia/Milady accounts get priority,
-  but a strong community post can still surface.
-*/
 const editorialScore = (item) => {
   const metrics =
     item.metrics || {};
@@ -318,39 +355,34 @@ const editorialScore = (item) => {
     score += 15;
   }
 
-  /*
-    Engagement matters, but we deliberately
-    prevent viral numbers from completely
-    overpowering editorial relevance.
-  */
+  score +=
+    relevanceScore(
+      item.text
+    );
 
   score +=
     Math.min(
       metrics.likes || 0,
       100
-    ) * 0.12;
+    ) * 0.15;
 
   score +=
     Math.min(
       metrics.reposts || 0,
       50
-    ) * 0.35;
+    ) * 0.4;
 
   score +=
     Math.min(
       metrics.quotes || 0,
       30
-    ) * 0.45;
+    ) * 0.5;
 
   score +=
     Math.min(
       metrics.replies || 0,
       50
     ) * 0.08;
-
-  /*
-    Mild recency weighting.
-  */
 
   if (item.created_at) {
     const ageHours =
@@ -366,7 +398,7 @@ const editorialScore = (item) => {
       Math.max(
         0,
         12 - ageHours
-      ) * 0.25;
+      ) * 0.2;
   }
 
   return Number(
@@ -381,25 +413,20 @@ const isUsefulCommunityPost = (
     return true;
   }
 
-  const text =
-    normalizeText(
-      item.text
-    );
+  const raw =
+    item.text || "";
 
-  /*
-    Kill the exact behavior we saw in V1:
-    "@someone milady"
-  */
+  const text =
+    normalizeText(raw);
 
   if (
-    text.length < 24
+    containsBlockedTerm(raw)
   ) {
     return false;
   }
 
   if (
-    text === "milady" ||
-    text === "remilia"
+    text.length < 35
   ) {
     return false;
   }
@@ -408,12 +435,46 @@ const isUsefulCommunityPost = (
     text.split(" ");
 
   if (
-    words.length < 5
+    words.length < 6
   ) {
     return false;
   }
 
-  return true;
+  const metrics =
+    item.metrics || {};
+
+  const engagement =
+    (metrics.likes || 0) +
+    (metrics.reposts || 0) * 2 +
+    (metrics.quotes || 0) * 2 +
+    (metrics.replies || 0);
+
+  const relevance =
+    relevanceScore(raw);
+
+  /*
+    Community posts must actually earn publication.
+
+    Either:
+    - strong cultural relevance
+    OR
+    - moderate relevance + engagement
+  */
+
+  if (
+    relevance >= 8
+  ) {
+    return true;
+  }
+
+  if (
+    relevance >= 4 &&
+    engagement >= 6
+  ) {
+    return true;
+  }
+
+  return false;
 };
 
 const dedupe = (items) => {
@@ -462,15 +523,6 @@ const dedupe = (items) => {
   return output;
 };
 
-/*
-  Prevent one very active account
-  from swallowing the entire desk.
-
-  Primary accounts may have up to
-  3 posts each.
-
-  Community authors get 1.
-*/
 const limitAuthors = (
   items
 ) => {
@@ -549,10 +601,6 @@ export async function GET() {
   let primary = [];
   let community = [];
 
-  /*
-    Run the two searches concurrently.
-  */
-
   const results =
     await Promise.allSettled([
       searchX(
@@ -593,11 +641,6 @@ export async function GET() {
       results[1].reason
     );
   }
-
-  /*
-    Only fail completely if both
-    X searches fail.
-  */
 
   if (
     results.every(
@@ -668,17 +711,24 @@ export async function GET() {
     );
 
   /*
-    The Cultural Desk should feel
-    edited, not endless.
+    V3 deliberately does NOT
+    force-fill ten slots.
 
-    Return the best 10 maximum.
+    Better to print four good
+    dispatches than ten weak ones.
   */
 
   const items =
-    candidates.slice(
-      0,
-      10
-    );
+    candidates
+      .filter(
+        (item) =>
+          item.primary ||
+          item.editorial_score >= 18
+      )
+      .slice(
+        0,
+        8
+      );
 
   return json(
     {
@@ -686,7 +736,7 @@ export async function GET() {
 
       source: "x",
 
-      version: 2,
+      version: 3,
 
       primary_accounts:
         accounts,
@@ -706,6 +756,9 @@ export async function GET() {
         community:
           community.length,
 
+        after_filtering:
+          candidates.length,
+
         published:
           items.length,
       },
@@ -721,15 +774,6 @@ export async function GET() {
     },
     200,
     {
-      /*
-        30-minute edge cache.
-
-        Site visitors read the
-        cached Cultural Wire instead
-        of repeatedly charging the
-        X API.
-      */
-
       "cache-control":
         "public, s-maxage=1800, stale-while-revalidate=3600",
     }
