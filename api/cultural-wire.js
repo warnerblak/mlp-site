@@ -452,15 +452,6 @@ const isUsefulCommunityPost = (
   const relevance =
     relevanceScore(raw);
 
-  /*
-    Community posts must actually earn publication.
-
-    Either:
-    - strong cultural relevance
-    OR
-    - moderate relevance + engagement
-  */
-
   if (
     relevance >= 8
   ) {
@@ -710,14 +701,6 @@ export async function GET() {
       candidates
     );
 
-  /*
-    V3 deliberately does NOT
-    force-fill ten slots.
-
-    Better to print four good
-    dispatches than ten weak ones.
-  */
-
   const items =
     candidates
       .filter(
@@ -774,8 +757,13 @@ export async function GET() {
     },
     200,
     {
+      /*
+        Cache Cultural Wire for 15 minutes.
+        After expiry, Vercel may serve the
+        existing wire while revalidating.
+      */
       "cache-control":
-        "public, s-maxage=1800, stale-while-revalidate=3600",
+        "public, s-maxage=900, stale-while-revalidate=1800",
     }
   );
 }
