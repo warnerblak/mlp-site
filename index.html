@@ -1610,6 +1610,52 @@ a,
   }
 }
 
+
+/* ==================== COPY DESK DAILY HOUSE NOTE — ISOLATED ==================== */
+.copydesk-note-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:18px;
+  align-items:end;
+  margin-bottom:10px;
+}
+.copydesk-note-head h2{
+  margin:2px 0 0;
+}
+.copydesk-note-meta{
+  display:grid;
+  text-align:right;
+  gap:2px;
+  font-size:9px!important;
+  color:var(--ink)!important;
+}
+.copydesk-note-quote{
+  margin:12px 0 10px;
+  padding:0;
+  border:0;
+  font:700 clamp(22px,3.3vw,36px)/1.05 "Times New Roman",Times,serif;
+  color:var(--ink)!important;
+  max-width:900px;
+}
+.copydesk-note-foot{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  border-top:1px solid var(--ink);
+  padding-top:8px;
+  font-size:9px!important;
+  color:var(--ink)!important;
+}
+.copydesk-note-foot a{
+  color:var(--ink)!important;
+  font-weight:700;
+}
+@media(max-width:700px){
+  .copydesk-note-head{grid-template-columns:1fr}
+  .copydesk-note-meta{text-align:left}
+  .copydesk-note-foot{display:grid}
+}
+
 </style>
 </head>
 <body>
@@ -2294,355 +2340,27 @@ function validClassifiedUrl(v){if(!v)return'';try{const u=new URL(v,location.ori
 function cfDate(v){try{return new Date(v).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toUpperCase()}catch{return''}}
 function classifiedHTML(c){
   const u=validClassifiedUrl(c.url);
-  return `<article class="classified dynamic"><h3>${escapeHtml(classifiedLabels[c.category]||c.category||'Notice')}</h3>
-  <h4 class="classified-title">${escapeHtml(c.headline||'Untitled notice')}</h4><p class="classified-body">${escapeHtml(c.body||'')}</p>
-  <div class="classified-meta">${c.handle?escapeHtml(c.handle)+' · ':''}PRINTED ${cfDate(c.created_at)}${c.expires_at?' · EXPIRES '+cfDate(c.expires_at):''}
-  ${u?`<br><a class="classified-link" href="${u}" target="_blank" rel="noopener">Reply / source →</a>`:''}</div></article>`;
-}
-async function loadClassifieds(){
-  const grid=document.getElementById('classifiedGrid');
-  try{
-    const r=await fetch('/api/classifieds'); if(!r.ok)throw new Error();
-    const d=await r.json();
-    grid.innerHTML=d.items?.length?d.items.map(classifiedHTML).join(''):'<div class="classified-empty">No approved classifieds are currently on press. Be the first to submit one.</div>';
-  }catch{grid.innerHTML='<div class="classified-empty">The classified desk is temporarily unavailable. Please try again shortly.</div>'}
-}
-const cfModal=document.getElementById('classifiedModal');
-const cfTrigger=document.getElementById('postClassifiedBtn');
-function openCF(){cfModal.classList.add('open');cfModal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>document.getElementById('classifiedHeadline').focus(),30)}
-function closeCF(){cfModal.classList.remove('open');cfModal.setAttribute('aria-hidden','true');document.body.style.overflow='';if(typeof ndSetContext==='function')ndSetContext('classifieds');cfTrigger.focus()}
-document.getElementById('postClassifiedBtn').onclick=openCF;document.getElementById('closeClassifiedModal').onclick=closeCF;
-cfModal.addEventListener('click',e=>{if(e.target===cfModal)closeCF()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCF()});
-document.getElementById('classifiedHeadline').addEventListener('input',e=>headlineCount.textContent=e.target.value.length);
-document.getElementById('classifiedBody').addEventListener('input',e=>bodyCount.textContent=e.target.value.length);
-document.getElementById('classifiedForm').addEventListener('submit',async e=>{
-  e.preventDefault();const s=document.getElementById('classifiedFormStatus'),b=document.getElementById('classifiedSubmitBtn');
-  const payload={category:classifiedCategory.value,days:Number(classifiedExpires.value),headline:classifiedHeadline.value.trim(),body:classifiedBody.value.trim(),handle:classifiedHandle.value.trim(),url:classifiedLink.value.trim()};
-  s.className='form-status';s.textContent='Sending to the moderation desk…';b.disabled=true;
-  try{
-    const r=await fetch('/api/classifieds',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
-    const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);
-    s.className='form-status success';s.textContent='Received. Your classified is pending editorial approval.';e.target.reset();headlineCount.textContent='0';bodyCount.textContent='0';setTimeout(closeCF,1400)
-  }catch(err){s.className='form-status error';s.textContent=err.message||'Submission failed'}finally{b.disabled=false}
-});
-loadClassifieds();
-
-
-/* ==================== MLP NEWS DESK 95 ==================== */
-const ndRoot=document.documentElement;
-const ndStatus=document.getElementById('ndStatus');
-function ndSay(s){ndStatus.textContent=s;clearTimeout(ndSay.t);ndSay.t=setTimeout(()=>ndStatus.textContent='Ready — Copy Desk',2500)}
-function ndCloseMenus(){document.querySelectorAll('.nd-menu.open').forEach(m=>m.classList.remove('open'));document.querySelectorAll('.nd-menu-btn').forEach(b=>b.setAttribute('aria-expanded','false'))}
-document.querySelectorAll('.nd-menu-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const m=b.closest('.nd-menu'),was=m.classList.contains('open');ndCloseMenus();if(!was){m.classList.add('open');b.setAttribute('aria-expanded','true')}}));
-document.addEventListener('click',ndCloseMenus);
-function ndGo(id,label){const e=document.getElementById(id);if(e){e.scrollIntoView({behavior:'smooth',block:'start'});ndSay(label||`Opened ${id}`)}}
-function ndOpen(id){const d=document.getElementById(id);if(d){d.classList.add('open');d.setAttribute('aria-hidden','false')}}
-function ndClose(id){const d=document.getElementById(id);if(d){d.classList.remove('open');d.setAttribute('aria-hidden','true')}}
-document.querySelectorAll('[data-nd-close]').forEach(b=>b.addEventListener('click',()=>ndClose(b.dataset.ndClose)));
-async function ndCommand(c){
-  ndCloseMenus();
-  switch(c){
-    case'front':ndGo('printer','Front page / current edition');break;
-    case'operators':ndGo('operators','Operator File opened');break;
-    case'classifieds':ndGo('classifieds','Classified Advertising Desk opened');break;
-    case'archive':ndGo('miladyDaily','Milady Daily opened');break;
-    case'mlpify':ndGo('mlpify','Print Department opened');break;
-    case'links':ndGo('links','Reference Desk opened');break;
-    case'find':ndGo('operators','Find Operator');setTimeout(()=>document.getElementById('tokenInput')?.focus(),400);break;
-    case'random':document.getElementById('randomBtn')?.click();ndSay('Random Operator record opened');break;
-    case'newclassified':document.getElementById('postClassifiedBtn')?.click();ndSay('Classified form opened');break;
-    case'image':ndGo('mlpify','Print Department opened');setTimeout(()=>document.getElementById('fileInput')?.click(),400);break;
-    case'copycontract':
-      try{await navigator.clipboard.writeText(document.getElementById('contract')?.textContent||'');ndSay('Contract address copied')}catch{ndSay('Clipboard unavailable')}
-      break;
-    case'themes':ndOpen('ndThemes');break;
-    case'dailyhelp':ndOpen('ndDailyRules');break;
-    case'dailyabout':ndOpen('ndDailyAbout');break;
-    case'about':ndOpen('ndAbout');break;
-  }
-}
-document.querySelectorAll('[data-nd]').forEach(x=>x.addEventListener('click',()=>{if(!x.disabled)ndCommand(x.dataset.nd)}));
-document.querySelectorAll('[data-desk-go]').forEach(x=>x.addEventListener('click',()=>ndCommand(x.dataset.deskGo)));
-
-const ndThemes={
- standard:{desk:'#3b7773',face:'#c0c0c0',a:'#000080',b:'#1084d0',sel:'#000080',paste:'#777',crt:'rgba(184,211,181,.035)'},
- newsroom:{desk:'#555b60',face:'#c3c3c3',a:'#28354e',b:'#536d8d',sel:'#28354e',paste:'#72767a',crt:'rgba(195,204,188,.025)'},
- aqua:{desk:'#187d83',face:'#c4c8c3',a:'#005d68',b:'#2b999f',sel:'#005d68',paste:'#778280',crt:'rgba(153,221,208,.045)'},
- midnight:{desk:'#1f2428',face:'#b9b9b7',a:'#20293d',b:'#485c7d',sel:'#20293d',paste:'#4d5155',crt:'rgba(157,180,165,.025)'},
- danger:{desk:'#2b1d1d',face:'#bdb8b3',a:'#650000',b:'#ad2419',sel:'#650000',paste:'#5d5652',crt:'rgba(255,124,93,.025)'}
-};
-function ndApplyTheme(name,persist=true){
- const t=ndThemes[name]||ndThemes.standard,set=(k,v)=>ndRoot.style.setProperty(k,v);
- set('--desk',t.desk);set('--chrome',t.face);set('--title1',t.a);set('--title2',t.b);set('--select',t.sel);set('--pasteboard',t.paste);set('--crt',t.crt);
- document.getElementById('ndThemeSelect').value=name;if(persist)localStorage.setItem('mlp-newsdesk-theme',name);
- ndSay(`Theme: ${document.getElementById('ndThemeSelect').selectedOptions[0].text}`);
-}
-document.getElementById('ndApplyTheme').addEventListener('click',()=>{ndApplyTheme(document.getElementById('ndThemeSelect').value);ndClose('ndThemes')});
-ndApplyTheme(localStorage.getItem('mlp-newsdesk-theme')||'standard',false);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){ndCloseMenus();document.querySelectorAll('.nd-dialog.open').forEach(d=>ndClose(d.id))}});
-
-
-/* ==================== NEWS DESK POLISH ==================== */
-const ndMainStatus=document.getElementById('ndStatus');
-
-function ndFlashStatus(text){
-  ndMainStatus.textContent=text;
-  ndMainStatus.classList.add('flash');
-  clearTimeout(ndFlashStatus.t);
-  ndFlashStatus.t=setTimeout(()=>{
-    ndMainStatus.classList.remove('flash');
-    ndMainStatus.textContent='Ready — Copy Desk';
-  },2200);
-}
-
-function ndShowStamp(message){
-  const el=document.getElementById('ndStampMessage');
-  if(el)el.textContent=message;
-  ndOpen('ndStampDialog');
-}
-
-document.addEventListener('keydown',e=>{
-  if(!(e.ctrlKey||e.metaKey))return;
-  if(e.key==='1'){e.preventDefault();ndCommand('front')}
-  if(e.key==='2'){e.preventDefault();ndCommand('operators')}
-  if(e.key==='3'){e.preventDefault();ndCommand('classifieds')}
-  if(e.key==='4'){e.preventDefault();ndCommand('mlpify')}
-  if(e.key==='5'){e.preventDefault();ndCommand('archive')}
-  if(e.key.toLowerCase()==='f'){e.preventDefault();ndCommand('find')}
-});
-
-const originalNdCommand=ndCommand;
-ndCommand=async function(c){
-  await originalNdCommand(c);
-  if(c==='random')ndFlashStatus('FILED — random operator opened');
-  if(c==='newclassified')ndFlashStatus('AD DESK — new submission form opened');
-  if(c==='mlpify')ndFlashStatus('PRINT DEPT — ready');
-  if(c==='operators')ndFlashStatus('OPERATOR FILE — open');
-  if(c==='archive')ndFlashStatus('MILADY DAILY — puzzle open');
-};
-
-const originalClassifiedSubmit=document.getElementById('classifiedForm');
-if(originalClassifiedSubmit){
-  originalClassifiedSubmit.addEventListener('submit',()=>{
-    setTimeout(()=>{
-      const status=document.getElementById('classifiedFormStatus');
-      if(status && status.classList.contains('success')){
-        ndShowStamp('CLASSIFIED RECEIVED — awaiting editorial review.');
-      }
-    },700);
-  });
-}
-
-const dlBtn=document.getElementById('downloadBtn');
-if(dlBtn){
-  dlBtn.addEventListener('click',()=>ndFlashStatus('PRINT DEPT — proof saved'));
-}
-
-
-/* ==================== FUNCTIONAL EDITOR CONTEXT BAR ==================== */
-const ndContextBar=document.getElementById('ndContextBar');
-const ndContextPrimary=document.getElementById('ndContextPrimary');
-const ndContextDetail=document.getElementById('ndContextDetail');
-const ndContextState=document.getElementById('ndContextState');
-
-const ndContexts={
-  printer:{
-    primary:'CURRENT EDITION',
-    detail:'FRONT PAGE / PROOF 01',
-    state:'STATUS: READY',
-    tone:'active'
-  },
-  operators:{
-    primary:'OPERATOR FILE',
-    detail:'620 RECORDS ON FILE',
-    state:'STATUS: READY',
-    tone:'active'
-  },
-  classifieds:{
-    primary:'CLASSIFIED DESK',
-    detail:'COMMUNITY ADVERTISING',
-    state:'STATUS: ACCEPTING SUBMISSIONS',
-    tone:'active'
-  },
-  mlpify:{
-    primary:'PRINT DEPARTMENT',
-    detail:'MLPIFY / IMAGE PROCESSING',
-    state:'STATUS: READY',
-    tone:'active'
-  },
-  miladyDaily:{
-    primary:'MILADY DAILY',
-    detail:'FIVE LETTERS / SIX TRIES',
-    state:'STATUS: READY',
-    tone:'active'
-  },
-  links:{
-    primary:'REFERENCE DESK',
-    detail:'OFFICIAL PUBLICATION LINKS',
-    state:'STATUS: READY',
-    tone:'active'
-  },
-  wire:{
-    primary:'WIRE DESK',
-    detail:'REMILIANET',
-    state:'STATUS: STANDBY',
-    tone:'standby'
-  }
-};
-
-function ndSetContext(key, detailOverride, stateOverride, toneOverride){
-  const c=ndContexts[key]||ndContexts.printer;
-  ndContextPrimary.textContent=c.primary;
-  ndContextDetail.textContent=detailOverride||c.detail;
-  ndContextState.textContent=stateOverride||c.state;
-  ndContextBar.dataset.state=toneOverride||c.tone;
-}
-
-const ndObservedSections=['printer','operators','classifieds','mlpify','miladyDaily','links']
-  .map(id=>document.getElementById(id)).filter(Boolean);
-
-const ndContextObserver=new IntersectionObserver(entries=>{
-  const visible=entries
-    .filter(e=>e.isIntersecting)
-    .sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
-  if(visible)ndSetContext(visible.target.id);
-},{rootMargin:'-22% 0px -58% 0px',threshold:[0,.1,.25,.5]});
-
-ndObservedSections.forEach(el=>ndContextObserver.observe(el));
-
-/* Enrich context with live operator/search state where possible. */
-const ndTokenInput=document.getElementById('tokenInput');
-if(ndTokenInput){
-  ndTokenInput.addEventListener('input',()=>{
-    const value=ndTokenInput.value.trim();
-    if(value){
-      ndSetContext('operators',`SEARCH / OPERATOR ${value}`,'STATUS: SEARCHING','attention');
-    }else{
-      ndSetContext('operators');
-    }
-  });
-}
-
-/* Print Department reflects selected source file. */
-const ndFileInput=document.getElementById('fileInput');
-if(ndFileInput){
-  ndFileInput.addEventListener('change',()=>{
-    const f=ndFileInput.files?.[0];
-    if(f){
-      ndSetContext('mlpify',`SOURCE: ${f.name.toUpperCase()}`,'STATUS: SOURCE LOADED','active');
-    }else{
-      ndSetContext('mlpify');
-    }
-  });
-}
-
-/* Classified dialog changes the desk state while the editor is working. */
-const ndPostClassified=document.getElementById('postClassifiedBtn');
-if(ndPostClassified){
-  ndPostClassified.addEventListener('click',()=>{
-    ndSetContext('classifieds','NEW ADVERTISEMENT','STATUS: EDITING','attention');
-  });
-}
-
-/* Keep context intentional on load. */
-ndSetContext('printer');
-
-
-
-/* ==================== MILADY DAILY HELP EVENTS ==================== */
-const dailyRulesBtn=document.getElementById('dailyRulesBtn');
-if(dailyRulesBtn){
-  dailyRulesBtn.addEventListener('click',()=>ndOpen('ndDailyRules'));
-}
-const ndBeginDaily=document.getElementById('ndBeginDaily');
-if(ndBeginDaily){
-  ndBeginDaily.addEventListener('click',()=>{
-    ndClose('ndDailyRules');
-    document.getElementById('miladyDaily')?.scrollIntoView({behavior:'smooth',block:'start'});
-    ndSay('Milady Daily — begin puzzle');
-  });
-}
-
-</script>
-
-<script src="/assets/milady-daily-words.js"></script>
-<script src="/assets/milady-daily.js"></script>
-
-<script>
-(function(){
-  const d=new Date();
-  const months=["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
-  const mast=document.getElementById("mastheadDate");
-  if(mast) mast.textContent=`${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-  const epoch=new Date(2026,7,13);
-  const today=new Date(d.getFullYear(),d.getMonth(),d.getDate());
-  const n=Math.max(1,Math.floor((today-epoch)/86400000)+1);
-  const hdr=document.getElementById("dailyHeaderPuzzle");
-  if(hdr) hdr.textContent=`PUZZLE ${String(n).padStart(3,"0")}`;
-})();
-</script>
-
-<script>
-(function(){
- const signals=["REMILIA NEVER SLEEPS","THE TIMELINE IS THE WIRE","POSTING IS AN ART PRACTICE","WHITE HEARTS / BLACK INK","THE NETWORK REMEMBERS","MILADY WORLD SERVICE"];
- const el=document.getElementById("remiliaSignal");
- if(el) el.textContent=signals[Math.floor(Math.random()*signals.length)];
-})();
-</script>
-
-<script>
-/* ==================== CULTURAL DESK / LIVE X WIRE ==================== */
-(function(){
-  const feed=document.getElementById("culturalWireFeed");
-  const updated=document.getElementById("culturalWireUpdated");
-  const count=document.getElementById("culturalWireCount");
-  if(!feed)return;
-
-  const esc=(value="")=>String(value).replace(/[&<>"']/g,ch=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[ch]));
-
-  const relativeTime=(iso)=>{
-    if(!iso)return "FILED";
-    const seconds=Math.max(0,Math.floor((Date.now()-new Date(iso).getTime())/1000));
-    if(seconds<60)return "NOW";
-    const minutes=Math.floor(seconds/60);
-    if(minutes<60)return `${minutes}M AGO`;
-    const hours=Math.floor(minutes/60);
-    if(hours<24)return `${hours}H AGO`;
-    const days=Math.floor(hours/24);
-    return `${days}D AGO`;
-  };
-
-  const dispatchHTML=(item,index)=>{
-    const author=item.author||{};
-    const metrics=item.metrics||{};
-    const handle=author.username?`@${author.username}`:"UNKNOWN";
-    const label=item.primary
-      ? `${esc(item.category||"PRIMARY")} / PRIMARY WIRE`
-      : "COMMUNITY DISPATCH";
-
-    const metricParts=[];
-    if(metrics.likes)metricParts.push(`♥ ${Number(metrics.likes).toLocaleString()}`);
-    if(metrics.reposts)metricParts.push(`RP ${Number(metrics.reposts).toLocaleString()}`);
-    if(metrics.replies)metricParts.push(`RE ${Number(metrics.replies).toLocaleString()}`);
-    if(metrics.quotes)metricParts.push(`QT ${Number(metrics.quotes).toLocaleString()}`);
-
-    return `<article class="cultural-dispatch">
-      <div class="dispatch-file">
-        <div class="${item.primary?"primary-wire":""}">${label}</div>
-        <div>${relativeTime(item.created_at)}</div>
-        <div>FILE ${String(index+1).padStart(2,"0")}</div>
+  return `<article class="classified dynamic">
+      <div class="copydesk-note-head">
+        <div>
+          <div class="eyebrow">From the copy desk</div>
+          <h2>House Note</h2>
+        </div>
+        <div class="copydesk-note-meta mono">
+          <span id="houseNoteNumber">HOUSE NOTE / 001</span>
+          <span id="houseNoteDate">FILED TODAY</span>
+        </div>
       </div>
-      <div class="dispatch-body">
-        <div class="dispatch-author">${esc(handle)}</div>
-        <p class="dispatch-text">${esc(item.text||"")}</p>
-        ${metricParts.length?`<div class="dispatch-metrics">${metricParts.join(" / ")}</div>`:""}
+
+      <blockquote class="copydesk-note-quote" id="houseNoteQuote">
+        Loading today's archive file…
+      </blockquote>
+
+      <div class="copydesk-note-foot mono">
+        <span id="houseNoteSource">REMILIA / ARCHIVE</span>
+        <a id="houseNoteLink" href="#" target="_blank" rel="noopener noreferrer">SOURCE →</a>
       </div>
-      <div class="dispatch-source">
-        <a href="${esc(item.source_url||"#")}" target="_blank" rel="noopener noreferrer">Read transmission →</a>
-      </div>
-    </article>`;
+</article>`;
   };
 
   async function loadCulturalWire(){
@@ -2683,6 +2401,122 @@ if(ndBeginDaily){
   }
 
   loadCulturalWire();
+})();
+</script>
+
+
+<script>
+/* ==================== COPY DESK / DAILY HOUSE NOTE ==================== */
+(function(){
+  const HOUSE_NOTES = [
+    {
+      text: "We don't have to try. We're the new art.",
+      type: "MANIFESTO",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "And so we self-organized into Remilia.",
+      type: "ORIGIN",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "Remilia is an institution.",
+      type: "MANIFESTO",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "Remilia is a self-organization.",
+      type: "MANIFESTO",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "Remilia is a lifestyle brand.",
+      type: "MANIFESTO",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "Remilia is an artist's colony.",
+      type: "MANIFESTO",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "Remilia is a community center for the digital village.",
+      type: "NETWORK",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "Remilia is a manifesto.",
+      type: "MANIFESTO",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "Remilia will save the internet.",
+      type: "NETWORK",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "We're God's little warriors.",
+      type: "MANIFESTO",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "We're network kommandos.",
+      type: "NETWORK",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    },
+    {
+      text: "Nothing we can do can be cringe, except when it is and then we don't care, we don't care.",
+      type: "INTERNET CULTURE",
+      source: "REMILIA",
+      year: "2021",
+      sourceUrl: "https://wiki.remilia.org/I_Long_For_Network_Spirituality"
+    }
+  ];
+
+  const quoteEl = document.getElementById("houseNoteQuote");
+  const sourceEl = document.getElementById("houseNoteSource");
+  const linkEl = document.getElementById("houseNoteLink");
+  const numberEl = document.getElementById("houseNoteNumber");
+  const dateEl = document.getElementById("houseNoteDate");
+
+  if(!quoteEl || !HOUSE_NOTES.length) return;
+
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - start) / 86400000);
+  const note = HOUSE_NOTES[(dayOfYear - 1) % HOUSE_NOTES.length];
+
+  quoteEl.textContent = `“${note.text}”`;
+  sourceEl.textContent = `${note.source} / ${note.type} / ${note.year}`;
+  linkEl.href = note.sourceUrl;
+  numberEl.textContent = `HOUSE NOTE / ${String(dayOfYear).padStart(3,"0")}`;
+  dateEl.textContent = now.toLocaleDateString("en-US",{
+    month:"long",
+    day:"numeric",
+    year:"numeric"
+  }).toUpperCase();
 })();
 </script>
 
