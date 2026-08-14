@@ -1,0 +1,49 @@
+name: Build MLP Operator Archive
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build operator archive
+        env:
+          MLP_ARCHIVE_CONCURRENCY: 6
+          MLP_ARCHIVE_TIMEOUT_MS: 9000
+          MLP_ARCHIVE_RETRIES: 4
+        run: npm run build:operators
+
+      - name: Verify archive
+        run: npm run verify:operators
+
+      - name: Archive build output
+        run: |
+          mkdir -p artifact
+          cp data/operators.json artifact/operators.json
+          cp -R operators artifact/operators
+
+      - name: Upload operator archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlp-operator-archive
+          path: artifact
+          if-no-files-found: error
+          retention-days: 14
