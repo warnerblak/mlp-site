@@ -77,6 +77,14 @@ const RETRIES = Math.max(
   )
 );
 
+const BATCH_SIZE = Math.max(
+  1,
+  Number(
+    process.env
+      .MLP_ARCHIVE_BATCH_SIZE || 75
+  )
+);
+
 const args =
   new Set(
     process.argv.slice(2)
@@ -964,7 +972,7 @@ async function main() {
   const failures =
     [];
 
-  const ids =
+  const allIds =
     Array.from(
       {
         length:
@@ -975,6 +983,35 @@ async function main() {
         index
       ) =>
         index + 1
+    );
+
+  const missingIds =
+    [];
+
+  for (
+    const id of allIds
+  ) {
+    const key =
+      String(id);
+
+    const complete =
+      archive[key] &&
+      (await outputExists(id));
+
+    if (
+      FORCE ||
+      !complete
+    ) {
+      missingIds.push(
+        id
+      );
+    }
+  }
+
+  const ids =
+    missingIds.slice(
+      0,
+      BATCH_SIZE
     );
 
   console.log(
@@ -994,6 +1031,18 @@ async function main() {
   );
 
   console.log(
+    `Batch:    ${BATCH_SIZE}`
+  );
+
+  console.log(
+    `Missing before run: ${missingIds.length}`
+  );
+
+  console.log(
+    `Attempting this run: ${ids.length}`
+  );
+
+  console.log(
     `Force:    ${
       FORCE
         ? "YES"
@@ -1010,6 +1059,18 @@ async function main() {
   );
 
   console.log("");
+
+  if (
+    ids.length === 0
+  ) {
+    console.log(
+      "NO MISSING OPERATORS"
+    );
+
+    console.log(
+      "Archive already appears complete."
+    );
+  }
 
   let completed =
     0;
@@ -1036,14 +1097,16 @@ async function main() {
         console.log(
           `[${pad(
             completed
-          )}/${SUPPLY}] #${pad(
+          )}/${pad(
+            ids.length
+          )}] #${pad(
             id
           )} ${mark}`
         );
 
         if (
           result.status ===
-            "built" &&
+          "built" &&
           completed % 10 ===
             0
         ) {
@@ -1071,7 +1134,9 @@ async function main() {
         console.error(
           `[${pad(
             completed
-          )}/${SUPPLY}] #${pad(
+          )}/${pad(
+            ids.length
+          )}] #${pad(
             id
           )} FAILED — ${
             error?.message ||
@@ -1109,7 +1174,7 @@ async function main() {
 
   const imageChecks =
     await Promise.all(
-      ids.map(
+      allIds.map(
         async (id) => ({
           id,
 
@@ -1139,8 +1204,6 @@ async function main() {
   );
 
   if (
-    failures.length ===
-      0 &&
     records ===
       SUPPLY &&
     missingImages.length ===
@@ -1170,34 +1233,27 @@ async function main() {
   );
 
   console.log(
-    `FAILED FETCHES: ${failures.length}`
+    `FAILED THIS RUN: ${failures.length}`
   );
 
   console.log(
     `MISSING IMAGE SETS: ${missingImages.length}`
   );
 
+  console.log(
+    `REMAINING OPERATORS: ${missingImages.length}`
+  );
+
   if (
     failures.length
   ) {
     console.log(
-      `FAILED IDS: ${
+      `FAILED IDS THIS RUN: ${
         failures
           .map(
             (item) =>
               item.id
           )
-          .join(", ")
-      }`
-    );
-  }
-
-  if (
-    missingImages.length
-  ) {
-    console.log(
-      `MISSING IMAGE IDS: ${
-        missingImages
           .join(", ")
       }`
     );
