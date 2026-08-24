@@ -53,75 +53,120 @@ const FAIL_PATH =
     "operator-build-failures.json"
   );
 
-/*
- * Respect workflow values where useful,
- * but keep them within safe limits.
- */
-const CONCURRENCY = clampInt(
-  process.env.MLP_ARCHIVE_CONCURRENCY,
-  2,
-  1,
-  4
-);
 
-const FETCH_TIMEOUT_MS = clampInt(
-  process.env.MLP_ARCHIVE_TIMEOUT_MS,
-  20000,
-  5000,
-  30000
-);
+/* ============================================================
+   CONFIGURATION
+   ============================================================ */
 
-/*
- * Intentionally capped at 3.
- *
- * The old workflow may still pass 5,
- * but 5 rounds × 3 gateways × long
- * timeouts can make a handful of bad
- * operators consume the entire job.
- */
-const RETRY_ROUNDS = clampInt(
-  process.env.MLP_ARCHIVE_RETRIES,
-  3,
-  1,
-  3
-);
+const CONCURRENCY =
+  envInt(
+    "MLP_ARCHIVE_CONCURRENCY",
+    3,
+    1,
+    6
+  );
 
-/*
- * Smaller batches make every GitHub
- * Action predictable and cumulative.
- */
-const BATCH_SIZE = clampInt(
-  process.env.MLP_ARCHIVE_BATCH_SIZE,
-  50,
-  1,
-  100
-);
+const FETCH_TIMEOUT_MS =
+  envInt(
+    "MLP_ARCHIVE_TIMEOUT_MS",
+    15000,
+    5000,
+    30000
+  );
+
+const GATEWAY_ROUNDS =
+  envInt(
+    "MLP_ARCHIVE_GATEWAY_ROUNDS",
+    2,
+    1,
+    3
+  );
+
+const MAX_PASSES =
+  envInt(
+    "MLP_ARCHIVE_PASSES",
+    4,
+    1,
+    10
+  );
+
+const CHECKPOINT_EVERY =
+  envInt(
+    "MLP_ARCHIVE_CHECKPOINT_EVERY",
+    5,
+    1,
+    50
+  );
+
+const FORCE =
+  process.argv.includes(
+    "--force"
+  );
 
 const ALLOW_PARTIAL =
   process.env
     .MLP_ARCHIVE_ALLOW_PARTIAL === "1";
 
-const FORCE =
-  new Set(
-    process.argv.slice(2)
-  ).has("--force");
+
+/*
+ * GitHub Actions job limit is currently
+ * 120 minutes in our workflow.
+ *
+ * Stop the downloader at 105 minutes if
+ * necessary so GitHub still has time to
+ * save the cache and artifact.
+ *
+ * A local run has no time limit unless
+ * explicitly configured.
+ */
+const DEFAULT_MAX_RUN_MINUTES =
+  process.env.GITHUB_ACTIONS === "true"
+    ? 105
+    : 0;
+
+const MAX_RUN_MINUTES =
+  envInt(
+    "MLP_ARCHIVE_MAX_RUN_MINUTES",
+    DEFAULT_MAX_RUN_MINUTES,
+    0,
+    10000
+  );
+
+const DEADLINE =
+  MAX_RUN_MINUTES > 0
+    ? Date.now() +
+      MAX_RUN_MINUTES *
+        60_000
+    : Infinity;
+
+
+const gatewayCooldowns =
+  new Map();
+
+let stopRequested =
+  false;
+
+let checkpointChain =
+  Promise.resolve();
 
 
 /* ============================================================
-   BASIC HELPERS
+   GENERAL HELPERS
    ============================================================ */
 
-function clampInt(
-  value,
+function envInt(
+  name,
   fallback,
   min,
   max
 ) {
-  const parsed =
-    Number(value);
+  const value =
+    Number(
+      process.env[name]
+    );
 
   if (
-    !Number.isFinite(parsed)
+    !Number.isFinite(value)
   ) {
     return fallback;
   }
@@ -130,7 +175,7 @@ function clampInt(
     min,
     Math.min(
       max,
-      Math.floor(parsed)
+      Math.floor(value)
     )
   );
 }
@@ -153,13 +198,35 @@ function sleep(ms) {
 }
 
 
-function jitter(base) {
-  return Math.floor(
-    base *
-    (
-      0.8 +
-      Math.random() * 0.4
+function jitter(ms) {
+  return Math.max(
+    0,
+    Math.floor(
+      ms *
+        (
+          0.8 +
+          Math.random() *
+            0.4
+        )
     )
+  );
+}
+
+
+function timeRemaining() {
+  return DEADLINE ===
+    Infinity
+    ? Infinity
+    : DEADLINE -
+        Date.now();
+}
+
+
+function shouldStop() {
+  return (
+    stopRequested ||
+    timeRemaining() <=
+      60_000
   );
 }
 
@@ -192,54 +259,50 @@ function decodeAbiString(hex) {
     hex.slice(2);
 
   if (
-    clean.length < 128
+    clean.length <
+    128
   ) {
     throw new Error(
       "Malformed ABI string response"
     );
   }
 
-  const offsetBytes =
+  const offset =
     Number.parseInt(
       clean.slice(
         0,
         64
       ),
       16
+    ) * 2;
+
+  const length =
+    Number.parseInt(
+      clean.slice(
+        offset,
+        offset + 64
+      ),
+      16
     );
 
-  const offset =
-    offsetBytes * 2;
-
-  const lengthHex =
-    clean.slice(
-      offset,
-      offset + 64
-    );
-
-  if (!lengthHex) {
+  if (
+    !Number.isFinite(
+      length
+    )
+  ) {
     throw new Error(
       "Malformed ABI string length"
     );
   }
 
-  const length =
-    Number.parseInt(
-      lengthHex,
-      16
-    );
-
   const start =
     offset + 64;
-
-  const end =
-    start +
-    length * 2;
 
   const data =
     clean.slice(
       start,
-      end
+      start +
+        length * 2
     );
 
   if (
@@ -256,12 +319,14 @@ function decodeAbiString(hex) {
       data,
       "hex"
     )
-    .toString("utf8");
+    .toString(
+      "utf8"
+    );
 }
 
 
 /* ============================================================
-   DATA / IPFS URI HELPERS
+   URI HANDLING
    ============================================================ */
 
 function decodeDataUri(uri) {
@@ -275,28 +340,22 @@ function decodeDataUri(uri) {
     return null;
   }
 
-  const mime =
-    match[1] ||
-    "application/octet-stream";
-
-  const isBase64 =
-    Boolean(match[2]);
-
-  const payload =
-    match[3] || "";
-
   return {
-    mime,
+    mime:
+      match[1] ||
+      "application/octet-stream",
 
     buffer:
-      isBase64
+      match[2]
         ? Buffer.from(
-            payload,
+            match[3] ||
+              "",
             "base64"
           )
         : Buffer.from(
             decodeURIComponent(
-              payload
+              match[3] ||
+                ""
             ),
             "utf8"
           ),
@@ -304,47 +363,71 @@ function decodeDataUri(uri) {
 }
 
 
-function ipfsKey(uri) {
+function normalizeResourceUri(
+  uri
+) {
   if (
-    !uri?.startsWith(
-      "ipfs://"
-    )
+    typeof uri !==
+    "string"
   ) {
-    return null;
+    return uri;
   }
 
-  return uri
-    .slice(7)
-    .replace(
-      /^ipfs\//,
-      ""
+  const value =
+    uri.trim();
+
+  if (
+    value.startsWith(
+      "ar://"
+    )
+  ) {
+    return (
+      "https://arweave.net/" +
+      value.slice(5)
     );
+  }
+
+  return value;
 }
 
 
-/*
- * Rotate the preferred gateway by
- * operator ID instead of hammering
- * Pinata/IPFS.io first every time.
- */
-function rotatedGatewayUrls(
+function resourceCandidates(
   uri,
   seed = 0
 ) {
-  const key =
-    ipfsKey(uri);
+  const value =
+    normalizeResourceUri(
+      uri
+    );
 
-  if (!key) {
-    return [uri];
+  if (!value) {
+    return [];
   }
+
+  if (
+    !value.startsWith(
+      "ipfs://"
+    )
+  ) {
+    return [value];
+  }
+
+  const key =
+    value
+      .slice(7)
+      .replace(
+        /^ipfs\//,
+        ""
+      );
 
   const start =
     Math.abs(
-      Number(seed) || 0
+      Number(seed) ||
+      0
     ) %
     IPFS_GATEWAYS.length;
 
-  const ordered = [];
+  const urls = [];
 
   for (
     let i = 0;
@@ -352,25 +435,87 @@ function rotatedGatewayUrls(
     IPFS_GATEWAYS.length;
     i++
   ) {
-    const gateway =
+    urls.push(
       IPFS_GATEWAYS[
         (
           start + i
         ) %
         IPFS_GATEWAYS.length
-      ];
-
-    ordered.push(
-      gateway + key
+      ] + key
     );
   }
 
-  return ordered;
+  return urls;
+}
+
+
+function extractImageUri(
+  metadata
+) {
+  if (
+    typeof metadata?.image ===
+      "string" &&
+    metadata.image.trim()
+  ) {
+    return metadata
+      .image
+      .trim();
+  }
+
+  if (
+    typeof metadata
+      ?.image_url ===
+      "string" &&
+    metadata
+      .image_url
+      .trim()
+  ) {
+    return metadata
+      .image_url
+      .trim();
+  }
+
+  if (
+    typeof metadata
+      ?.image_data ===
+      "string" &&
+    metadata
+      .image_data
+      .trim()
+  ) {
+    const raw =
+      metadata
+        .image_data
+        .trim();
+
+    if (
+      /^<svg[\s>]/i
+        .test(raw)
+    ) {
+      return (
+        "data:image/svg+xml;base64," +
+        Buffer
+          .from(
+            raw,
+            "utf8"
+          )
+          .toString(
+            "base64"
+          )
+      );
+    }
+
+    return raw;
+  }
+
+  throw new Error(
+    "Metadata has no usable image URI"
+  );
 }
 
 
 /* ============================================================
-   FETCH HELPERS
+   NETWORK
    ============================================================ */
 
 async function fetchWithTimeout(
@@ -400,7 +545,19 @@ async function fetchWithTimeout(
       }
     );
   } finally {
-    clearTimeout(timer);
+    clearTimeout(
+      timer
+    );
+  }
+}
+
+
+function cooldownKey(url) {
+  try {
+    return new URL(url)
+      .host;
+  } catch {
+    return url;
   }
 }
 
@@ -409,9 +566,11 @@ function retryAfterMs(
   response
 ) {
   const value =
-    response.headers.get(
-      "retry-after"
-    );
+    response
+      .headers
+      .get(
+        "retry-after"
+      );
 
   if (!value) {
     return 0;
@@ -426,7 +585,7 @@ function retryAfterMs(
     )
   ) {
     return Math.min(
-      10000,
+      30000,
       Math.max(
         0,
         seconds * 1000
@@ -434,18 +593,20 @@ function retryAfterMs(
     );
   }
 
-  const date =
+  const when =
     Date.parse(value);
 
   if (
-    Number.isFinite(date)
+    Number.isFinite(
+      when
+    )
   ) {
     return Math.min(
-      10000,
+      30000,
       Math.max(
         0,
-        date -
-        Date.now()
+        when -
+          Date.now()
       )
     );
   }
@@ -454,36 +615,88 @@ function retryAfterMs(
 }
 
 
+async function waitForCooldown(
+  url
+) {
+  const until =
+    gatewayCooldowns
+      .get(
+        cooldownKey(
+          url
+        )
+      ) || 0;
+
+  if (
+    until >
+    Date.now()
+  ) {
+    await sleep(
+      Math.min(
+        until -
+          Date.now(),
+        10000
+      )
+    );
+  }
+}
+
+
+function setCooldown(
+  url,
+  ms
+) {
+  gatewayCooldowns.set(
+    cooldownKey(url),
+    Date.now() +
+      Math.max(
+        ms,
+        3000
+      )
+  );
+}
+
+
 /*
- * IMPORTANT:
+ * Try gateways sequentially instead of
+ * firing all three simultaneously.
  *
- * Gateways are deliberately tried
- * SEQUENTIALLY.
- *
- * The earlier builder fired every
- * public gateway simultaneously.
- * That multiplied traffic and helped
- * trigger 429 rate limits.
+ * This dramatically reduces 429 spam.
  */
-async function fetchFromGateways(
+async function fetchResource(
   uri,
   seed,
-  handler,
-  label
+  label,
+  handler
 ) {
   const data =
-    decodeDataUri(uri);
+    decodeDataUri(
+      uri
+    );
 
   if (data) {
     return handler({
       url:
         uri,
 
-      data,
-
       response:
         null,
+
+      data,
     });
+  }
+
+  const candidates =
+    resourceCandidates(
+      uri,
+      seed
+    );
+
+  if (
+    !candidates.length
+  ) {
+    throw new Error(
+      `${label} has no usable URL`
+    );
   }
 
   let lastError;
@@ -491,21 +704,39 @@ async function fetchFromGateways(
   for (
     let round = 0;
     round <
-    RETRY_ROUNDS;
+    GATEWAY_ROUNDS;
     round++
   ) {
-    const urls =
-      rotatedGatewayUrls(
-        uri,
-        seed + round
-      );
-
     for (
-      const url of urls
+      let i = 0;
+      i <
+      candidates.length;
+      i++
     ) {
+      if (
+        shouldStop()
+      ) {
+        throw new Error(
+          "Run deadline reached"
+        );
+      }
+
+      const url =
+        candidates[
+          (
+            i + round
+          ) %
+          candidates.length
+        ];
+
       try {
+        await waitForCooldown(
+          url
+        );
+
         const timeout =
-          label === "image"
+          label ===
+          "image"
             ? Math.min(
                 FETCH_TIMEOUT_MS,
                 18000
@@ -523,21 +754,33 @@ async function fetchFromGateways(
           );
 
         if (
-          response.status === 429
+          response.status ===
+          429
         ) {
-          const wait =
+          setCooldown(
+            url,
             retryAfterMs(
               response
-            );
-
-          if (wait) {
-            await sleep(
-              wait
-            );
-          }
+            ) ||
+              jitter(
+                5000
+              )
+          );
 
           throw new Error(
             `${url} -> HTTP 429`
+          );
+        }
+
+        if (
+          response.status >=
+          500
+        ) {
+          setCooldown(
+            url,
+            jitter(
+              2000
+            )
           );
         }
 
@@ -551,13 +794,13 @@ async function fetchFromGateways(
 
         return await handler({
           url,
-
+          response,
           data:
             null,
-
-          response,
         });
-      } catch (error) {
+      } catch (
+        error
+      ) {
         lastError =
           error;
       }
@@ -565,11 +808,12 @@ async function fetchFromGateways(
 
     if (
       round <
-      RETRY_ROUNDS - 1
+      GATEWAY_ROUNDS -
+        1
     ) {
       await sleep(
         jitter(
-          800 *
+          750 *
           2 ** round
         )
       );
@@ -578,8 +822,10 @@ async function fetchFromGateways(
 
   throw new Error(
     `${label} unavailable: ${
-      lastError?.message ||
       lastError
+        ?.message ||
+      lastError ||
+      "unknown error"
     }`
   );
 }
@@ -589,31 +835,36 @@ async function fetchFromGateways(
    ETHEREUM RPC
    ============================================================ */
 
-async function rpcTokenUri(id) {
+async function rpcTokenUri(
+  id
+) {
   let lastError;
 
   for (
     let round = 0;
-    round <
-    RETRY_ROUNDS;
+    round < 2;
     round++
   ) {
-    const start =
-      (
-        id + round
-      ) %
-      RPCS.length;
-
     for (
       let i = 0;
       i <
       RPCS.length;
       i++
     ) {
+      if (
+        shouldStop()
+      ) {
+        throw new Error(
+          "Run deadline reached"
+        );
+      }
+
       const url =
         RPCS[
           (
-            start + i
+            id +
+            round +
+            i
           ) %
           RPCS.length
         ];
@@ -657,10 +908,7 @@ async function rpcTokenUri(id) {
                 }),
             },
 
-            Math.min(
-              FETCH_TIMEOUT_MS,
-              10000
-            )
+            10000
           );
 
         if (
@@ -696,20 +944,20 @@ async function rpcTokenUri(id) {
         return decodeAbiString(
           json.result
         );
-      } catch (error) {
+      } catch (
+        error
+      ) {
         lastError =
           error;
       }
     }
 
     if (
-      round <
-      RETRY_ROUNDS - 1
+      round === 0
     ) {
       await sleep(
         jitter(
-          600 *
-          2 ** round
+          500
         )
       );
     }
@@ -717,7 +965,8 @@ async function rpcTokenUri(id) {
 
   throw new Error(
     `tokenURI(${id}) unavailable: ${
-      lastError?.message ||
+      lastError
+        ?.message ||
       lastError
     }`
   );
@@ -725,25 +974,26 @@ async function rpcTokenUri(id) {
 
 
 /* ============================================================
-   METADATA
+   METADATA + IMAGE FETCHING
    ============================================================ */
 
 async function fetchJsonUri(
   uri,
   id
 ) {
-  return fetchFromGateways(
+  return fetchResource(
     uri,
-
     id,
+    "metadata",
 
     async ({
-      data,
       response,
+      data,
     }) => {
       const text =
         data
-          ? data.buffer
+          ? data
+              .buffer
               .toString(
                 "utf8"
               )
@@ -759,30 +1009,24 @@ async function fetchJsonUri(
           "Metadata response was not valid JSON"
         );
       }
-    },
-
-    "metadata"
+    }
   );
 }
 
-
-/* ============================================================
-   IMAGE FETCHING
-   ============================================================ */
 
 async function fetchBinaryUri(
   uri,
   id
 ) {
-  return fetchFromGateways(
+  return fetchResource(
     uri,
-
     id + 17,
+    "image",
 
     async ({
       url,
-      data,
       response,
+      data,
     }) => {
       if (data) {
         return {
@@ -797,18 +1041,16 @@ async function fetchBinaryUri(
         };
       }
 
-      const arrayBuffer =
-        await response
-          .arrayBuffer();
-
       return {
         buffer:
           Buffer.from(
-            arrayBuffer
+            await response
+              .arrayBuffer()
           ),
 
         mime:
-          response.headers
+          response
+            .headers
             .get(
               "content-type"
             ) || "",
@@ -816,15 +1058,13 @@ async function fetchBinaryUri(
         sourceUrl:
           url,
       };
-    },
-
-    "image"
+    }
   );
 }
 
 
 /* ============================================================
-   DIRECTORIES / JSON
+   FILES
    ============================================================ */
 
 async function ensureDirs() {
@@ -874,30 +1114,25 @@ async function readJson(
 
 
 async function readArchive() {
-  const archive =
+  const data =
     await readJson(
       ARCHIVE_PATH,
       {}
     );
 
   return (
-    archive &&
-    typeof archive ===
-      "object"
+    data &&
+    typeof data ===
+      "object" &&
+    !Array.isArray(
+      data
+    )
   )
-    ? archive
+    ? data
     : {};
 }
 
 
-/*
- * operator-build-failures.json
- * is already part of your GitHub
- * Actions cache.
- *
- * We now use it as persistent retry
- * state as well.
- */
 async function readFailureState() {
   const raw =
     await readJson(
@@ -905,13 +1140,13 @@ async function readFailureState() {
       []
     );
 
-  const map =
+  const state =
     new Map();
 
   if (
     !Array.isArray(raw)
   ) {
-    return map;
+    return state;
   }
 
   for (
@@ -923,14 +1158,16 @@ async function readFailureState() {
       );
 
     if (
-      !Number.isInteger(id) ||
+      !Number.isInteger(
+        id
+      ) ||
       id < 1 ||
       id > SUPPLY
     ) {
       continue;
     }
 
-    map.set(
+    state.set(
       id,
       {
         id,
@@ -957,7 +1194,31 @@ async function readFailureState() {
     );
   }
 
-  return map;
+  return state;
+}
+
+
+async function atomicWriteJson(
+  file,
+  value
+) {
+  const temp =
+    `${file}.tmp`;
+
+  await fs.writeFile(
+    temp,
+    JSON.stringify(
+      value,
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  await fs.rename(
+    temp,
+    file
+  );
 }
 
 
@@ -976,30 +1237,15 @@ async function saveArchive(
         .toISOString(),
 
     fullFormat:
-      "webp",
+      "lossless-webp",
 
     thumbnailFormat:
       "webp",
   };
 
-  const temp =
-    `${ARCHIVE_PATH}.tmp`;
-
-  await fs.writeFile(
-    temp,
-
-    JSON.stringify(
-      archive,
-      null,
-      2
-    ) + "\n",
-
-    "utf8"
-  );
-
-  await fs.rename(
-    temp,
-    ARCHIVE_PATH
+  await atomicWriteJson(
+    ARCHIVE_PATH,
+    archive
   );
 }
 
@@ -1026,34 +1272,36 @@ async function saveFailureState(
       )
       .sort(
         (a, b) =>
-          a.id - b.id
+          a.id -
+          b.id
       );
 
-  const temp =
-    `${FAIL_PATH}.tmp`;
-
-  await fs.writeFile(
-    temp,
-
-    JSON.stringify(
-      rows,
-      null,
-      2
-    ) + "\n",
-
-    "utf8"
-  );
-
-  await fs.rename(
-    temp,
-    FAIL_PATH
+  await atomicWriteJson(
+    FAIL_PATH,
+    rows
   );
 }
 
 
 /* ============================================================
-   OUTPUT VALIDATION
+   IMAGE FILES
    ============================================================ */
+
+function fullPath(id) {
+  return path.join(
+    FULL_DIR,
+    `${pad(id)}.webp`
+  );
+}
+
+
+function thumbPath(id) {
+  return path.join(
+    THUMB_DIR,
+    `${pad(id)}.webp`
+  );
+}
+
 
 async function fileReady(
   file,
@@ -1076,23 +1324,9 @@ async function fileReady(
 }
 
 
-function fullPath(id) {
-  return path.join(
-    FULL_DIR,
-    `${pad(id)}.webp`
-  );
-}
-
-
-function thumbPath(id) {
-  return path.join(
-    THUMB_DIR,
-    `${pad(id)}.webp`
-  );
-}
-
-
-async function outputExists(id) {
+async function outputExists(
+  id
+) {
   const [
     full,
     thumb,
@@ -1114,36 +1348,82 @@ async function outputExists(id) {
 }
 
 
-/* ============================================================
-   LOCAL REPAIR
-   ============================================================ */
+/*
+ * Remove leftover temporary files from
+ * a previously interrupted run.
+ */
+async function cleanupTemps() {
+  for (
+    const dir of [
+      DATA_DIR,
+      FULL_DIR,
+      THUMB_DIR,
+    ]
+  ) {
+    let names = [];
+
+    try {
+      names =
+        await fs.readdir(
+          dir
+        );
+    } catch {
+      continue;
+    }
+
+    await Promise.all(
+      names
+        .filter(
+          (name) =>
+            name.endsWith(
+              ".tmp"
+            )
+        )
+        .map(
+          (name) =>
+            fs.rm(
+              path.join(
+                dir,
+                name
+              ),
+              {
+                force:
+                  true,
+              }
+            )
+        )
+    );
+  }
+}
+
 
 /*
- * If a full image survived a canceled
- * workflow but its thumbnail did not,
- * rebuild the thumb locally rather
- * than touching IPFS again.
+ * If the full image already exists but
+ * the thumbnail is missing, rebuild the
+ * thumb locally instead of hitting IPFS.
  */
 async function repairThumbnailFromFull(
   id
 ) {
-  const full =
-    fullPath(id);
-
-  const thumb =
-    thumbPath(id);
-
   if (
-    !(await fileReady(full)) ||
-    (await fileReady(thumb))
+    !(
+      await fileReady(
+        fullPath(id)
+      )
+    ) ||
+    await fileReady(
+      thumbPath(id)
+    )
   ) {
     return false;
   }
 
   const temp =
-    `${thumb}.tmp`;
+    `${thumbPath(id)}.tmp`;
 
-  await sharp(full)
+  await sharp(
+    fullPath(id)
+  )
     .resize({
       width:
         360,
@@ -1174,7 +1454,7 @@ async function repairThumbnailFromFull(
 
   await fs.rename(
     temp,
-    thumb
+    thumbPath(id)
   );
 
   return true;
@@ -1239,87 +1519,103 @@ async function buildImages(
       }
     ).rotate();
 
-  const metadata =
+  const meta =
     await input
       .metadata();
 
-  /*
-   * Write to temporary files first.
-   *
-   * If GitHub kills a workflow during
-   * image conversion, the next run
-   * won't mistake a half-written file
-   * for a finished operator.
-   */
   const fullTemp =
     `${fullPath(id)}.tmp`;
 
   const thumbTemp =
     `${thumbPath(id)}.tmp`;
 
-  await input
-    .clone()
-    .webp({
-      lossless:
-        true,
+  try {
+    await input
+      .clone()
+      .webp({
+        lossless:
+          true,
 
-      effort:
-        4,
-    })
-    .toFile(
-      fullTemp
+        effort:
+          4,
+      })
+      .toFile(
+        fullTemp
+      );
+
+    await input
+      .clone()
+      .resize({
+        width:
+          360,
+
+        height:
+          360,
+
+        fit:
+          "inside",
+
+        withoutEnlargement:
+          true,
+
+        kernel:
+          sharp.kernel
+            .lanczos3,
+      })
+      .webp({
+        quality:
+          84,
+
+        effort:
+          4,
+      })
+      .toFile(
+        thumbTemp
+      );
+
+    await fs.rename(
+      fullTemp,
+      fullPath(id)
     );
 
-  await input
-    .clone()
-    .resize({
-      width:
-        360,
-
-      height:
-        360,
-
-      fit:
-        "inside",
-
-      withoutEnlargement:
-        true,
-
-      kernel:
-        sharp.kernel
-          .lanczos3,
-    })
-    .webp({
-      quality:
-        84,
-
-      effort:
-        4,
-    })
-    .toFile(
-      thumbTemp
+    await fs.rename(
+      thumbTemp,
+      thumbPath(id)
     );
+  } catch (
+    error
+  ) {
+    await Promise.all([
+      fs.rm(
+        fullTemp,
+        {
+          force:
+            true,
+        }
+      ),
 
-  await fs.rename(
-    fullTemp,
-    fullPath(id)
-  );
+      fs.rm(
+        thumbTemp,
+        {
+          force:
+            true,
+        }
+      ),
+    ]);
 
-  await fs.rename(
-    thumbTemp,
-    thumbPath(id)
-  );
+    throw error;
+  }
 
   return {
     sourceUrl,
     mime,
 
     width:
-      metadata.width ||
+      meta.width ||
       null,
 
     height:
-      metadata.height ||
+      meta.height ||
       null,
 
     repairedLocally:
@@ -1329,7 +1625,7 @@ async function buildImages(
 
 
 /* ============================================================
-   ATTRIBUTES
+   METADATA NORMALIZATION
    ============================================================ */
 
 function normalizeAttributes(
@@ -1368,6 +1664,66 @@ function normalizeAttributes(
 }
 
 
+function applyImageInfo(
+  record,
+  id,
+  source
+) {
+  record.thumbnail =
+    `/operators/thumbs/${pad(
+      id
+    )}.webp`;
+
+  record.image =
+    `/operators/full/${pad(
+      id
+    )}.webp`;
+
+  record.source = {
+    ...(
+      record.source ||
+      {}
+    ),
+
+    resolvedImageUrl:
+      source.sourceUrl
+        ?.startsWith(
+          "data:"
+        )
+        ? null
+        : (
+            source.sourceUrl ||
+            record.source
+              ?.resolvedImageUrl ||
+            null
+          ),
+
+    mime:
+      source.mime ||
+      record.source
+        ?.mime ||
+      null,
+
+    width:
+      source.width ??
+      record.source
+        ?.width ??
+      null,
+
+    height:
+      source.height ??
+      record.source
+        ?.height ??
+      null,
+  };
+
+  delete record
+    .buildStatus;
+
+  return record;
+}
+
+
 /* ============================================================
    BUILD ONE OPERATOR
    ============================================================ */
@@ -1379,42 +1735,38 @@ async function buildOne(
   const key =
     String(id);
 
-  const existing =
+  let existing =
     archive[key];
 
+
   /*
-   * Fully complete local record.
+   * Completely finished already.
    */
   if (
     !FORCE &&
     existing &&
-    (await outputExists(id))
+    await outputExists(
+      id
+    )
   ) {
     return {
       id,
-
       status:
         "cached",
-
-      token:
-        existing,
     };
   }
 
+
   /*
-   * Metadata already exists but image
-   * files are missing.
+   * Metadata already exists.
    *
-   * Reuse canonicalImage so we don't
-   * repeat tokenURI + metadata calls.
+   * Only retry the image instead of
+   * hitting Ethereum + metadata again.
    */
   if (
     !FORCE &&
-    existing &&
-    typeof existing
-      .canonicalImage ===
-      "string" &&
-    existing.canonicalImage
+    existing
+      ?.canonicalImage
   ) {
     const source =
       await buildImages(
@@ -1423,50 +1775,12 @@ async function buildOne(
           .canonicalImage
       );
 
-    existing.thumbnail =
-      `/operators/thumbs/${pad(
-        id
-      )}.webp`;
-
-    existing.image =
-      `/operators/full/${pad(
-        id
-      )}.webp`;
-
-    existing.source = {
-      ...(
-        existing.source ||
-        {}
-      ),
-
-      resolvedImageUrl:
-        source.sourceUrl
-          ?.startsWith(
-            "data:"
-          )
-          ? null
-          : (
-              source.sourceUrl ||
-              existing.source
-                ?.resolvedImageUrl ||
-              null
-            ),
-
-      mime:
-        source.mime ||
-        existing.source
-          ?.mime ||
-        null,
-
-      width:
-        source.width,
-
-      height:
-        source.height,
-    };
-
     archive[key] =
-      existing;
+      applyImageInfo(
+        existing,
+        id,
+        source
+      );
 
     return {
       id,
@@ -1476,14 +1790,12 @@ async function buildOne(
           .repairedLocally
           ? "repaired"
           : "image-rebuilt",
-
-      token:
-        existing,
     };
   }
 
+
   /*
-   * Completely new operator.
+   * New operator.
    */
   const tokenURI =
     await rpcTokenUri(
@@ -1497,27 +1809,19 @@ async function buildOne(
     );
 
   const imageUri =
-    metadata.image ||
-    metadata.image_url ||
-    metadata.image_data;
-
-  if (
-    !imageUri ||
-    typeof imageUri !==
-      "string"
-  ) {
-    throw new Error(
-      "Metadata has no usable image URI"
-    );
-  }
-
-  const source =
-    await buildImages(
-      id,
-      imageUri
+    extractImageUri(
+      metadata
     );
 
-  const token = {
+
+  /*
+   * Save metadata in memory BEFORE
+   * attempting the image.
+   *
+   * If the image gateway fails, the next
+   * pass can retry only the image.
+   */
+  existing = {
     id,
 
     name:
@@ -1527,16 +1831,6 @@ async function buildOne(
     description:
       metadata.description ||
       "Milady Line Printer operator.",
-
-    thumbnail:
-      `/operators/thumbs/${pad(
-        id
-      )}.webp`,
-
-    image:
-      `/operators/full/${pad(
-        id
-      )}.webp`,
 
     attributes:
       normalizeAttributes(
@@ -1552,100 +1846,48 @@ async function buildOne(
     opensea:
       `${OPENSEA_ASSET}/${id}`,
 
-    source: {
-      resolvedImageUrl:
-        source.sourceUrl
-          ?.startsWith(
-            "data:"
-          )
-          ? null
-          : (
-              source.sourceUrl ||
-              null
-            ),
+    buildStatus:
+      "metadata-only",
 
-      mime:
-        source.mime ||
-        null,
-
-      width:
-        source.width,
-
-      height:
-        source.height,
-    },
+    source:
+      existing
+        ?.source ||
+      {},
   };
 
   archive[key] =
-    token;
+    existing;
+
+
+  const source =
+    await buildImages(
+      id,
+      imageUri
+    );
+
+  archive[key] =
+    applyImageInfo(
+      existing,
+      id,
+      source
+    );
 
   return {
     id,
-
     status:
       "built",
-
-    token,
   };
 }
 
 
 /* ============================================================
-   CONCURRENCY
-   ============================================================ */
-
-async function mapConcurrent(
-  items,
-  concurrency,
-  worker
-) {
-  let cursor =
-    0;
-
-  async function runner() {
-    while (true) {
-      const index =
-        cursor++;
-
-      if (
-        index >=
-        items.length
-      ) {
-        return;
-      }
-
-      await worker(
-        items[index],
-        index
-      );
-    }
-  }
-
-  await Promise.all(
-    Array.from(
-      {
-        length:
-          Math.min(
-            concurrency,
-            items.length
-          ),
-      },
-
-      () => runner()
-    )
-  );
-}
-
-
-/* ============================================================
-   MISSING RECORDS
+   ARCHIVE STATE
    ============================================================ */
 
 async function getMissingIds(
   archive
 ) {
-  const missing =
-    [];
+  const missing = [];
 
   for (
     let id = 1;
@@ -1673,6 +1915,184 @@ async function getMissingIds(
 }
 
 
+/*
+ * Operators with fewer historical
+ * failures are tried first.
+ *
+ * Difficult tokens cannot permanently
+ * block the rest of the collection.
+ */
+function sortByAttempts(
+  ids,
+  failureState
+) {
+  return [
+    ...ids,
+  ].sort(
+    (a, b) => {
+      const attemptsA =
+        failureState
+          .get(a)
+          ?.attempts ||
+        0;
+
+      const attemptsB =
+        failureState
+          .get(b)
+          ?.attempts ||
+        0;
+
+      if (
+        attemptsA !==
+        attemptsB
+      ) {
+        return (
+          attemptsA -
+          attemptsB
+        );
+      }
+
+      return a - b;
+    }
+  );
+}
+
+
+/* ============================================================
+   CHECKPOINTING
+   ============================================================ */
+
+function queueCheckpoint(
+  archive,
+  failureState
+) {
+  checkpointChain =
+    checkpointChain.then(
+      async () => {
+        const missing =
+          await getMissingIds(
+            archive
+          );
+
+        await saveArchive(
+          archive
+        );
+
+        await saveFailureState(
+          failureState,
+          missing
+        );
+      }
+    );
+
+  return checkpointChain;
+}
+
+
+/* ============================================================
+   CONCURRENCY
+   ============================================================ */
+
+async function runConcurrent(
+  ids,
+  worker
+) {
+  let cursor =
+    0;
+
+  async function runner() {
+    while (
+      !shouldStop()
+    ) {
+      const index =
+        cursor++;
+
+      if (
+        index >=
+        ids.length
+      ) {
+        return;
+      }
+
+      await worker(
+        ids[index],
+        index
+      );
+    }
+  }
+
+  await Promise.all(
+    Array.from(
+      {
+        length:
+          Math.min(
+            CONCURRENCY,
+            Math.max(
+              1,
+              ids.length
+            )
+          ),
+      },
+
+      () => runner()
+    )
+  );
+}
+
+
+/* ============================================================
+   FINAL VALIDATION
+   ============================================================ */
+
+async function finalValidate(
+  archive
+) {
+  const missing = [];
+
+  const badRecords = [];
+
+  for (
+    let id = 1;
+    id <= SUPPLY;
+    id++
+  ) {
+    const record =
+      archive[
+        String(id)
+      ];
+
+    if (
+      !record ||
+      !record.name ||
+      !Array.isArray(
+        record.attributes
+      )
+    ) {
+      badRecords.push(
+        id
+      );
+    }
+
+    if (
+      !(
+        await outputExists(
+          id
+        )
+      )
+    ) {
+      missing.push(
+        id
+      );
+    }
+  }
+
+  return {
+    missing,
+    badRecords,
+  };
+}
+
+
 /* ============================================================
    MAIN
    ============================================================ */
@@ -1680,65 +2100,22 @@ async function getMissingIds(
 async function main() {
   await ensureDirs();
 
+  await cleanupTemps();
+
   const archive =
     await readArchive();
 
   const failureState =
     await readFailureState();
 
-  const missingBefore =
+  let missing =
     await getMissingIds(
       archive
     );
 
-  /*
-   * CRITICAL IMPROVEMENT:
-   *
-   * Least-attempted operators go first.
-   *
-   * A handful of stubborn IDs can no
-   * longer occupy the first 50 slots
-   * forever and prevent the remaining
-   * collection from being attempted.
-   */
-  const ids =
-    [
-      ...missingBefore,
-    ]
-      .sort(
-        (a, b) => {
-          const attemptsA =
-            failureState
-              .get(a)
-              ?.attempts ||
-            0;
-
-          const attemptsB =
-            failureState
-              .get(b)
-              ?.attempts ||
-            0;
-
-          if (
-            attemptsA !==
-            attemptsB
-          ) {
-            return (
-              attemptsA -
-              attemptsB
-            );
-          }
-
-          return a - b;
-        }
-      )
-      .slice(
-        0,
-        BATCH_SIZE
-      );
 
   console.log(
-    "MLP STATIC ARCHIVE"
+    "MLP ONE-SHOT STATIC ARCHIVE"
   );
 
   console.log(
@@ -1746,233 +2123,391 @@ async function main() {
   );
 
   console.log(
-    `Supply:   ${SUPPLY}`
+    `Supply: ${SUPPLY}`
   );
 
   console.log(
-    `Workers:  ${CONCURRENCY}`
+    `Workers: ${CONCURRENCY}`
   );
 
   console.log(
-    `Batch:    ${BATCH_SIZE}`
+    `Max passes: ${MAX_PASSES}`
   );
 
   console.log(
-    `Retry rounds: ${RETRY_ROUNDS}`
+    `Gateway rounds per attempt: ${GATEWAY_ROUNDS}`
   );
 
   console.log(
-    `Missing before run: ${missingBefore.length}`
+    `Missing at start: ${missing.length}`
   );
 
   console.log(
-    `Attempting this run: ${ids.length}`
-  );
-
-  console.log(
-    `Force:    ${
-      FORCE
-        ? "YES"
-        : "NO"
+    `Already complete: ${
+      SUPPLY -
+      missing.length
     }`
   );
 
   console.log(
-    `Partial:  ${
-      ALLOW_PARTIAL
-        ? "YES"
-        : "NO"
+    `Run limit: ${
+      MAX_RUN_MINUTES >
+      0
+        ? `${MAX_RUN_MINUTES} minutes`
+        : "unlimited"
     }`
   );
 
   console.log("");
 
-  if (
-    ids.length === 0
-  ) {
-    console.log(
-      "NO MISSING OPERATORS"
-    );
-  }
 
-  let finished =
+  let totalSucceeded =
     0;
 
-  let successes =
+  let totalFailedAttempts =
     0;
 
-  let failuresThisRun =
+  let operationsSinceCheckpoint =
     0;
 
-  await mapConcurrent(
-    ids,
-    CONCURRENCY,
-
-    async (id) => {
-      try {
-        const result =
-          await buildOne(
-            id,
-            archive
-          );
-
-        finished++;
-        successes++;
-
-        /*
-         * Success means previous failure
-         * history is no longer relevant.
-         */
-        failureState.delete(
-          id
-        );
-
-        console.log(
-          `[${pad(
-            finished
-          )}/${pad(
-            ids.length
-          )}] #${pad(
-            id
-          )} ${result.status} ✓`
-        );
-
-        /*
-         * Save frequently.
-         *
-         * A canceled workflow should lose
-         * at most a handful of operators.
-         */
-        if (
-          successes %
-          5 ===
-          0
-        ) {
-          await saveArchive(
-            archive
-          );
-        }
-      } catch (error) {
-        finished++;
-        failuresThisRun++;
-
-        const previous =
-          failureState
-            .get(id);
-
-        failureState.set(
-          id,
-          {
-            id,
-
-            attempts:
-              (
-                previous
-                  ?.attempts ||
-                0
-              ) + 1,
-
-            lastError:
-              error?.message ||
-              String(error),
-
-            lastAttemptAt:
-              new Date()
-                .toISOString(),
-          }
-        );
-
-        console.error(
-          `[${pad(
-            finished
-          )}/${pad(
-            ids.length
-          )}] #${pad(
-            id
-          )} FAILED — ${
-            error?.message ||
-            error
-          }`
-        );
-      }
-    }
-  );
 
   /*
-   * Always persist what succeeded.
+   * PASS 1:
+   * attempt every missing operator.
+   *
+   * PASS 2+:
+   * attempt only what remains.
    */
-  await saveArchive(
-    archive
-  );
-
-  const missingAfter =
-    await getMissingIds(
-      archive
-    );
-
-  await saveFailureState(
-    failureState,
-    missingAfter
-  );
-
-  const records =
-    Object.keys(
-      archive
-    )
-      .filter(
-        (key) =>
-          /^\d+$/.test(
-            key
-          )
-      )
-      .length;
-
-  console.log("");
-
-  console.log(
-    "========================================"
-  );
-
-  if (
-    missingAfter.length ===
-      0 &&
-    records ===
-      SUPPLY
+  for (
+    let pass = 1;
+    pass <= MAX_PASSES;
+    pass++
   ) {
+    missing =
+      await getMissingIds(
+        archive
+      );
+
+    if (
+      !missing.length ||
+      shouldStop()
+    ) {
+      break;
+    }
+
+
+    const ids =
+      sortByAttempts(
+        missing,
+        failureState
+      );
+
+
+    let finished =
+      0;
+
+    let passSucceeded =
+      0;
+
+    let passFailed =
+      0;
+
+
     console.log(
-      "ARCHIVE COMPLETE"
+      "================================================"
     );
 
     console.log(
-      `${SUPPLY} / ${SUPPLY} OPERATORS VERIFIED`
+      `PASS ${pass}/${MAX_PASSES}`
     );
 
     console.log(
-      "========================================"
+      `Attempting ${ids.length} missing operators`
     );
 
-    return;
+    console.log(
+      "================================================"
+    );
+
+
+    await runConcurrent(
+      ids,
+
+      async (id) => {
+        try {
+          const result =
+            await buildOne(
+              id,
+              archive
+            );
+
+          finished++;
+
+
+          if (
+            result.status !==
+            "cached"
+          ) {
+            passSucceeded++;
+
+            totalSucceeded++;
+          }
+
+
+          failureState.delete(
+            id
+          );
+
+
+          console.log(
+            `[${
+              String(
+                finished
+              ).padStart(
+                3,
+                "0"
+              )
+            }/${
+              String(
+                ids.length
+              ).padStart(
+                3,
+                "0"
+              )
+            }] #${pad(
+              id
+            )} ${result.status} ✓`
+          );
+        } catch (
+          error
+        ) {
+          finished++;
+
+          passFailed++;
+
+          totalFailedAttempts++;
+
+
+          const previous =
+            failureState
+              .get(id);
+
+
+          failureState.set(
+            id,
+            {
+              id,
+
+              attempts:
+                (
+                  previous
+                    ?.attempts ||
+                  0
+                ) + 1,
+
+              lastError:
+                error
+                  ?.message ||
+                String(
+                  error
+                ),
+
+              lastAttemptAt:
+                new Date()
+                  .toISOString(),
+            }
+          );
+
+
+          console.error(
+            `[${
+              String(
+                finished
+              ).padStart(
+                3,
+                "0"
+              )
+            }/${
+              String(
+                ids.length
+              ).padStart(
+                3,
+                "0"
+              )
+            }] #${pad(
+              id
+            )} FAILED — ${
+              error
+                ?.message ||
+              error
+            }`
+          );
+        }
+
+
+        operationsSinceCheckpoint++;
+
+
+        if (
+          operationsSinceCheckpoint >=
+          CHECKPOINT_EVERY
+        ) {
+          operationsSinceCheckpoint =
+            0;
+
+          await queueCheckpoint(
+            archive,
+            failureState
+          );
+        }
+      }
+    );
+
+
+    await queueCheckpoint(
+      archive,
+      failureState
+    );
+
+
+    missing =
+      await getMissingIds(
+        archive
+      );
+
+
+    console.log("");
+
+    console.log(
+      `PASS ${pass} RESULT`
+    );
+
+    console.log(
+      `Succeeded this pass: ${passSucceeded}`
+    );
+
+    console.log(
+      `Failed attempts this pass: ${passFailed}`
+    );
+
+    console.log(
+      `Remaining: ${missing.length}`
+    );
+
+    console.log("");
+
+
+    if (
+      !missing.length ||
+      shouldStop()
+    ) {
+      break;
+    }
+
+
+    /*
+     * Give public gateways a small rest
+     * before attacking only the failures.
+     */
+    const pauseMs =
+      Math.min(
+        15000,
+        3000 *
+          pass
+      );
+
+
+    console.log(
+      `Cooling down ${
+        Math.round(
+          pauseMs /
+          1000
+        )
+      }s before next pass...`
+    );
+
+
+    await sleep(
+      pauseMs
+    );
   }
 
+
+  /*
+   * Final guaranteed checkpoint.
+   */
+  await queueCheckpoint(
+    archive,
+    failureState
+  );
+
+  await checkpointChain;
+
+
+  const validation =
+    await finalValidate(
+      archive
+    );
+
+
+  const complete =
+    SUPPLY -
+    validation
+      .missing
+      .length;
+
+
   console.log(
-    "ARCHIVE INCOMPLETE"
+    "================================================"
   );
 
   console.log(
-    `JSON RECORDS: ${records} / ${SUPPLY}`
+    "FINAL ARCHIVE STATUS"
   );
 
   console.log(
-    `SUCCEEDED THIS RUN: ${successes}`
+    `COMPLETE OPERATORS: ${complete} / ${SUPPLY}`
   );
 
   console.log(
-    `FAILED THIS RUN: ${failuresThisRun}`
+    `MISSING IMAGE SETS: ${
+      validation
+        .missing
+        .length
+    }`
   );
 
   console.log(
-    `REMAINING OPERATORS: ${missingAfter.length}`
+    `INVALID/MISSING JSON RECORDS: ${
+      validation
+        .badRecords
+        .length
+    }`
   );
+
+  console.log(
+    `SUCCEEDED THIS RUN: ${totalSucceeded}`
+  );
+
+  console.log(
+    `FAILED ATTEMPTS THIS RUN: ${totalFailedAttempts}`
+  );
+
+
+  if (
+    validation
+      .missing
+      .length
+  ) {
+    console.log(
+      `REMAINING IDS: ${
+        validation
+          .missing
+          .join(", ")
+      }`
+    );
+  }
+
 
   console.log(
     `Details: ${
@@ -1983,30 +2518,118 @@ async function main() {
     }`
   );
 
+
   console.log(
-    "========================================"
+    "================================================"
   );
 
+
   if (
-    ALLOW_PARTIAL
+    validation
+      .missing
+      .length ===
+      0 &&
+    validation
+      .badRecords
+      .length ===
+      0
   ) {
     console.log(
-      "PARTIAL ARCHIVE SAVED — SAFE TO RESUME ON NEXT RUN"
+      "ARCHIVE COMPLETE — 620 / 620 VERIFIED"
     );
 
     return;
   }
 
-  process.exitCode =
-    1;
+
+  if (
+    shouldStop()
+  ) {
+    console.log(
+      "RUN STOPPED SAFELY BEFORE DEADLINE — PROGRESS CHECKPOINTED"
+    );
+  } else {
+    console.log(
+      "ARCHIVE STILL PARTIAL AFTER ALL RETRY PASSES — PROGRESS CHECKPOINTED"
+    );
+  }
+
+
+  if (
+    !ALLOW_PARTIAL
+  ) {
+    process.exitCode =
+      1;
+  }
 }
 
 
+/* ============================================================
+   SAFE SHUTDOWN
+   ============================================================ */
+
+async function requestStop(
+  signal
+) {
+  if (
+    stopRequested
+  ) {
+    return;
+  }
+
+  stopRequested =
+    true;
+
+  console.log(
+    `\n${signal} received — finishing current requests and saving progress...`
+  );
+
+  try {
+    await checkpointChain;
+  } catch (
+    error
+  ) {
+    console.error(
+      "Checkpoint flush failed:",
+      error
+    );
+  }
+}
+
+
+process.on(
+  "SIGINT",
+  () =>
+    void requestStop(
+      "SIGINT"
+    )
+);
+
+
+process.on(
+  "SIGTERM",
+  () =>
+    void requestStop(
+      "SIGTERM"
+    )
+);
+
+
+/* ============================================================
+   START
+   ============================================================ */
+
 main().catch(
-  (error) => {
+  async (error) => {
     console.error(
       error
     );
+
+    try {
+      await checkpointChain;
+    } catch {
+      // Best effort.
+    }
 
     process.exitCode =
       1;
