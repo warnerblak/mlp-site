@@ -1,7 +1,8 @@
-const URL = process.env.SUPABASE_URL,
-  KEY =
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+
+const KEY =
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const cats = new Set([
   "wanted",
@@ -37,58 +38,86 @@ const clean = (s, n) =>
 
 const goodUrl = (s) => {
   if (!s) return "";
+
   try {
     const u = new URL(s);
-    return ["http:", "https:"].includes(u.protocol) ? u.href : "";
+
+    return ["http:", "https:"].includes(u.protocol)
+      ? u.href
+      : "";
   } catch {
     return "";
   }
 };
 
 async function fp(req) {
-  const ip = (req.headers.get("x-forwarded-for") || "unknown")
+  const ip = (
+    req.headers.get("x-forwarded-for") ||
+    "unknown"
+  )
     .split(",")[0]
     .trim();
 
-  const ua = req.headers.get("user-agent") || "";
-  const salt = process.env.CLASSIFIEDS_HASH_SALT || "mlp";
+  const ua =
+    req.headers.get("user-agent") || "";
+
+  const salt =
+    process.env.CLASSIFIEDS_HASH_SALT ||
+    "mlp";
 
   const raw = new TextEncoder().encode(
     `${salt}|${ip}|${ua.slice(0, 180)}`
   );
 
-  const hash = await crypto.subtle.digest("SHA-256", raw);
+  const hash =
+    await crypto.subtle.digest(
+      "SHA-256",
+      raw
+    );
 
   return [...new Uint8Array(hash)]
-    .map((x) => x.toString(16).padStart(2, "0"))
+    .map((x) =>
+      x.toString(16).padStart(2, "0")
+    )
     .join("");
 }
 
 export async function GET() {
-  if (!URL || !KEY) {
+  if (!SUPABASE_URL || !KEY) {
     return j({
       items: [],
       configured: false,
     });
   }
 
-  const u = new URL(`${URL}/rest/v1/classifieds`);
+  const u = new URL(
+    `${SUPABASE_URL}/rest/v1/classifieds`
+  );
 
   u.searchParams.set(
     "select",
     "id,category,headline,body,handle,url,created_at,expires_at,featured"
   );
 
-  u.searchParams.set("status", "eq.approved");
+  u.searchParams.set(
+    "status",
+    "eq.approved"
+  );
+
   u.searchParams.set(
     "expires_at",
     `gt.${new Date().toISOString()}`
   );
+
   u.searchParams.set(
     "order",
     "featured.desc,created_at.desc"
   );
-  u.searchParams.set("limit", "20");
+
+  u.searchParams.set(
+    "limit",
+    "20"
+  );
 
   const r = await fetch(u, {
     headers: hd(),
@@ -96,7 +125,10 @@ export async function GET() {
 
   if (!r.ok) {
     return j(
-      { error: "Could not read classifieds" },
+      {
+        error:
+          "Could not read classifieds",
+      },
       502
     );
   }
@@ -115,7 +147,7 @@ export async function GET() {
 }
 
 export async function POST(req) {
-  if (!URL || !KEY) {
+  if (!SUPABASE_URL || !KEY) {
     return j(
       {
         error:
@@ -126,7 +158,8 @@ export async function POST(req) {
   }
 
   if (
-    process.env.CLASSIFIEDS_SUBMISSIONS_OPEN !==
+    process.env
+      .CLASSIFIEDS_SUBMISSIONS_OPEN !==
     "true"
   ) {
     return j(
@@ -143,55 +176,91 @@ export async function POST(req) {
   try {
     x = await req.json();
   } catch {
-    return j({ error: "Invalid JSON" }, 400);
+    return j(
+      {
+        error:
+          "Invalid JSON",
+      },
+      400
+    );
   }
 
-  const category = clean(x.category, 32);
-  const headline = clean(x.headline, 70);
-  const body = clean(x.body, 320);
-  const handle = clean(x.handle, 64);
-  const url = goodUrl(clean(x.url, 400));
+  const category =
+    clean(x.category, 32);
 
-  const days = [7, 14].includes(Number(x.days))
-    ? Number(x.days)
-    : 7;
+  const headline =
+    clean(x.headline, 70);
+
+  const body =
+    clean(x.body, 320);
+
+  const handle =
+    clean(x.handle, 64);
+
+  const url =
+    goodUrl(
+      clean(x.url, 400)
+    );
+
+  const days =
+    [7, 14].includes(
+      Number(x.days)
+    )
+      ? Number(x.days)
+      : 7;
 
   if (!cats.has(category)) {
     return j(
-      { error: "Choose a valid section." },
+      {
+        error:
+          "Choose a valid section.",
+      },
       400
     );
   }
 
   if (headline.length < 4) {
     return j(
-      { error: "Headline is too short." },
+      {
+        error:
+          "Headline is too short.",
+      },
       400
     );
   }
 
   if (body.length < 10) {
     return j(
-      { error: "Classified copy is too short." },
+      {
+        error:
+          "Classified copy is too short.",
+      },
       400
     );
   }
 
-  const hash = await fp(req);
+  const hash =
+    await fp(req);
 
-  const since = new Date(
-    Date.now() - 3600000
-  ).toISOString();
+  const since =
+    new Date(
+      Date.now() - 3600000
+    ).toISOString();
 
   const q = new URL(
-    `${URL}/rest/v1/classifieds`
+    `${SUPABASE_URL}/rest/v1/classifieds`
   );
 
-  q.searchParams.set("select", "id");
+  q.searchParams.set(
+    "select",
+    "id"
+  );
+
   q.searchParams.set(
     "submitter_hash",
     `eq.${hash}`
   );
+
   q.searchParams.set(
     "created_at",
     `gte.${since}`
@@ -199,15 +268,19 @@ export async function POST(req) {
 
   const cr = await fetch(q, {
     headers: hd({
-      prefer: "count=exact",
+      prefer:
+        "count=exact",
     }),
   });
 
-  const count = Number(
-    (
-      cr.headers.get("content-range") || ""
-    ).split("/")[1] || 0
-  );
+  const count =
+    Number(
+      (
+        cr.headers.get(
+          "content-range"
+        ) || ""
+      ).split("/")[1] || 0
+    );
 
   if (
     Number.isFinite(count) &&
@@ -222,34 +295,46 @@ export async function POST(req) {
     );
   }
 
-  const created = new Date();
+  const created =
+    new Date();
 
-  const expires = new Date(
-    created.getTime() +
-      days * 86400000
-  );
+  const expires =
+    new Date(
+      created.getTime() +
+        days * 86400000
+    );
 
   const rec = {
     category,
     headline,
     body,
-    handle: handle || null,
-    url: url || null,
-    status: "pending",
-    featured: false,
-    created_at: created.toISOString(),
-    expires_at: expires.toISOString(),
-    submitter_hash: hash,
+    handle:
+      handle || null,
+    url:
+      url || null,
+    status:
+      "pending",
+    featured:
+      false,
+    created_at:
+      created.toISOString(),
+    expires_at:
+      expires.toISOString(),
+    submitter_hash:
+      hash,
   };
 
   const r = await fetch(
-    `${URL}/rest/v1/classifieds`,
+    `${SUPABASE_URL}/rest/v1/classifieds`,
     {
-      method: "POST",
+      method:
+        "POST",
       headers: hd({
-        prefer: "return=minimal",
+        prefer:
+          "return=minimal",
       }),
-      body: JSON.stringify(rec),
+      body:
+        JSON.stringify(rec),
     }
   );
 
@@ -265,8 +350,10 @@ export async function POST(req) {
 
   return j(
     {
-      ok: true,
-      status: "pending",
+      ok:
+        true,
+      status:
+        "pending",
     },
     202
   );

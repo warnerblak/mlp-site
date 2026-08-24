@@ -3,10 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FRONT_PAGE.TXT - MLP CopyDesk 95</title>
-<link rel="icon" type="image/png" href="/favicon.png?v=162">
-<link rel="shortcut icon" type="image/png" href="/favicon.png?v=162">
-<meta name="description" content="Milady Line Printer — 620 operators, the MLPIFY print renderer, classifieds, and an evolving community print archive." />
+<title>Milady Daily — MLP News Desk 95</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="description" content="Milady Daily — the daily Milady and Remilia culture word puzzle from MLP News Desk 95. Milady Line Printer — 620 operators, the MLPIFY print renderer, classifieds, and an evolving community print archive." />
 <meta property="og:title" content="Milady Line Printer" />
 <meta property="og:description" content="620 operators. One machine. A community-built cultural print archive from Milady Line Printer." />
 <meta property="og:type" content="website" />
@@ -396,7 +395,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
 
 /* ============================================================
-   MLP COPYDESK 95 — V1
+   MLP NEWS DESK 95 — V1
    Windows 95 grammar + 1990s newspaper production + Milady culture
    ============================================================ */
 :root{
@@ -560,7 +559,14 @@ body:after{
   font:bold 10px/1 "Courier New",monospace;letter-spacing:.12em;
   background:var(--paper);
 }
-/* Editorial FILED badge removed in V16.1 */
+/* restrained MLP editorial stamps */
+.section-head:after{
+  content:"FILED";
+  display:inline-block;margin-left:10px;padding:2px 5px;
+  border:1px solid var(--stamp);color:var(--stamp);
+  transform:rotate(-2deg);font:8px/1 "Courier New",monospace;letter-spacing:.1em;
+  vertical-align:middle;
+}
 .modal-card{
   border-radius:0!important;border:2px solid #111!important;
   box-shadow:6px 7px 0 rgba(0,0,0,.28)!important;
@@ -608,7 +614,7 @@ body:after{
   position:relative;
 }
 .nd-preview:before{
-  content:"MLP COPYDESK 95";position:absolute;left:36px;right:36px;top:22px;height:14px;
+  content:"MLP NEWS DESK 95";position:absolute;left:36px;right:36px;top:22px;height:14px;
   padding:2px 5px;background:linear-gradient(90deg,var(--title1),var(--title2));color:#fff;
   font:bold 8px Tahoma,Arial,sans-serif;
 }
@@ -635,7 +641,7 @@ body:after{
 
 
 /* ============================================================
-   MLP COPYDESK 95 — PRODUCTION POLISH
+   MLP NEWS DESK 95 — PRODUCTION POLISH
    ============================================================ */
 .newsdesk95{
   max-height:none;
@@ -818,7 +824,7 @@ body:after{
 
 
 /* ============================================================
-   MLP COPYDESK 95 — PERIOD-CORRECT TYPESETTING PASS
+   MLP NEWS DESK 95 — PERIOD-CORRECT TYPESETTING PASS
    1995 software + 1995 desktop publishing + contemporary MLP
    ============================================================ */
 
@@ -1148,6 +1154,69 @@ body:after{
 }
 
 
+/* ==================== MILADY DAILY / WORDLE-STYLE ENGINE ==================== */
+.milady-daily .section-head{margin-bottom:14px}
+.daily-shell{
+  max-width:660px;margin:0 auto;border:1px solid var(--ink);padding:14px;
+  background:rgba(255,255,255,.08)
+}
+.daily-topline{display:flex;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--ink);font-size:9px!important}
+.daily-board{display:grid;gap:5px;width:min(300px,88vw);margin:18px auto 12px}
+.daily-row{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.daily-cell{
+  aspect-ratio:1;border:2px solid var(--ink);display:grid;place-items:center;
+  font:700 clamp(20px,5vw,31px)/1 "Courier New",monospace;text-transform:uppercase;
+  background:var(--paper2);min-width:0;overflow:hidden
+}
+.daily-cell.filled{border-color:#555}
+.daily-cell.correct{background:#315b33;color:#fff}
+.daily-cell.present{background:#9a7a22;color:#fff}
+.daily-cell.absent{background:#777;color:#fff}
+.daily-message{text-align:center;min-height:18px;font-size:10px!important;margin:8px 0 12px}
+.daily-keyboard{max-width:560px;margin:0 auto;display:grid;gap:5px}
+.daily-keyrow{display:flex;justify-content:center;gap:4px}
+.daily-key{
+  min-width:30px;height:34px;padding:0 7px;background:var(--chrome);color:#111;
+  border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #555;border-bottom:2px solid #555;
+  font:700 10px "MS Sans Serif",Arial,sans-serif;cursor:pointer
+}
+.daily-key.wide{min-width:58px}
+.daily-key.correct{background:#315b33;color:#fff}.daily-key.present{background:#9a7a22;color:#fff}.daily-key.absent{background:#777;color:#fff}
+.daily-actions{display:flex;justify-content:center;gap:8px;margin:14px 0 8px}
+.daily-file-note,.daily-stats{border-top:3px double var(--ink);margin-top:14px;padding-top:12px}
+.daily-file-note h3,.daily-stats h3{font:700 25px/1 "Times New Roman",Times,serif;margin:3px 0 8px}
+.daily-file-note p{margin:0 0 8px!important}
+.daily-rule{text-align:center;border-top:1px solid var(--ink);padding-top:9px;margin-top:12px;font-size:8px!important;color:var(--soft)}
+.daily-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.daily-stat{border:1px solid var(--ink);padding:8px 4px;text-align:center}
+.daily-stat b{display:block;font:700 22px "Courier New",monospace}.daily-stat span{font:8px "Courier New",monospace;text-transform:uppercase}
+@media(max-width:560px){
+  .daily-shell{padding:10px}.daily-topline{display:grid;text-align:center}
+  .daily-key{min-width:0;flex:1;padding:0 3px}.daily-key.wide{flex:1.6}
+}
+
+
+/* ==================== MILADY DAILY HELP ==================== */
+.daily-help-example{display:flex;justify-content:center;margin:14px 0}
+.daily-help-word{display:grid;grid-template-columns:repeat(5,42px);gap:4px}
+.daily-help-cell{
+  width:42px;height:42px;display:grid;place-items:center;border:2px solid #111;
+  font:700 20px/1 "Courier New",monospace;background:#eee;color:#111
+}
+.daily-help-cell.correct,.daily-help-swatch.correct{background:#315b33;color:#fff}
+.daily-help-cell.present,.daily-help-swatch.present{background:#9a7a22;color:#fff}
+.daily-help-cell.absent,.daily-help-swatch.absent{background:#777;color:#fff}
+.daily-help-legend{display:grid;gap:7px;margin:10px 0 14px;font-size:12px}
+.daily-help-legend>div{display:flex;align-items:center;gap:7px}
+.daily-help-swatch{width:14px;height:14px;display:inline-block;border:1px solid #111;flex:0 0 auto}
+@media(max-width:520px){
+  .daily-help-word{grid-template-columns:repeat(5,34px)}
+  .daily-help-cell{width:34px;height:34px;font-size:17px}
+}
+
+
+.daily-row.active .daily-cell{border-color:#111;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+
 /* ==================== FINAL MASTHEAD / DAILY HEADER PASS ==================== */
 .doc-fileline{
   display:flex;justify-content:space-between;gap:12px;padding:5px 7px;
@@ -1260,994 +1329,9 @@ html, body { max-width: 100%; overflow-x: hidden; }
 }
 
 
-/* ==================== LIVE CULTURAL DESK / X STANDBY ==================== */
-.cultural-wire-live{
-  padding:24px 0 22px;
-  border-top:3px double var(--ink);
-  border-bottom:3px double var(--ink);
+#miladyDaily{
+  scroll-margin-top:96px!important;
 }
-.cultural-wire-head{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:24px;
-  align-items:end;
-  margin-bottom:12px;
-}
-.cultural-wire-head h2{
-  margin:3px 0 6px;
-  font:700 clamp(30px,4.6vw,48px)/.96 "Times New Roman",Times,serif;
-  letter-spacing:-.025em;
-}
-.cultural-wire-head p{
-  max-width:690px;
-  margin:0!important;
-}
-.cultural-wire-status{
-  text-align:right;
-  display:grid;
-  gap:4px;
-  font-size:8px!important;
-  white-space:nowrap;
-}
-.wire-led{
-  width:7px;height:7px;
-  display:inline-block;
-  border:1px solid #111;
-  background:#315b33;
-  margin-right:5px;
-  vertical-align:-1px;
-}
-.cultural-wire-feed{
-  border-top:1px solid var(--ink);
-}
-.cultural-wire-loading,.cultural-wire-empty{
-  padding:18px 0;
-  font-size:9px!important;
-}
-.cultural-dispatch{
-  display:grid;
-  grid-template-columns:126px minmax(0,1fr) 86px;
-  gap:16px;
-  padding:14px 0;
-  border-bottom:1px solid rgba(17,17,17,.55);
-}
-.cultural-dispatch:last-child{border-bottom:0}
-.dispatch-file{
-  font:8px/1.35 "Courier New",Courier,monospace;
-  text-transform:uppercase;
-}
-.dispatch-file .primary-wire{
-  font-weight:700;
-}
-.dispatch-body{min-width:0}
-.dispatch-author{
-  font:700 10px/1.2 "Courier New",Courier,monospace;
-  margin-bottom:5px;
-  overflow-wrap:anywhere;
-}
-.dispatch-text{
-  font:16px/1.25 "Times New Roman",Times,serif;
-  margin:0!important;
-  overflow-wrap:anywhere;
-}
-.dispatch-metrics{
-  margin-top:7px;
-  font:8px/1.2 "Courier New",Courier,monospace;
-  color:var(--soft);
-}
-.dispatch-source{
-  display:flex;
-  justify-content:flex-end;
-  align-items:start;
-}
-.dispatch-source a{
-  color:inherit;
-  font:8px/1.2 "Courier New",Courier,monospace;
-  text-transform:uppercase;
-  text-decoration:underline;
-  text-underline-offset:2px;
-}
-.cultural-wire-foot{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  border-top:1px solid var(--ink);
-  padding-top:8px;
-  margin-top:4px;
-  font-size:8px!important;
-}
-@media(max-width:900px){
-  .cultural-wire-head{grid-template-columns:1fr}
-  .cultural-wire-status{text-align:left}
-  .cultural-dispatch{grid-template-columns:105px minmax(0,1fr) 80px}
-}
-@media(max-width:650px){
-  .cultural-dispatch{
-    grid-template-columns:1fr;
-    gap:5px;
-    padding:13px 0;
-  }
-  .dispatch-source{justify-content:flex-start}
-  .cultural-wire-foot{display:grid}
-}
-
-
-/* ==================== INK & LEGIBILITY PASS ==================== */
-:root{
-  --ink:#292520!important;
-  --ink2:#3d3832!important;
-  --soft:#625b52!important;
-}
-
-/* Keep the aged substrate, sharpen the printed information. */
-body{
-  color:var(--ink2)!important;
-}
-
-p,
-.story p,
-.section p,
-.intro p,
-.caption,
-.byline,
-.notice,
-.wire-row,
-.dispatch-text{
-  color:var(--ink2)!important;
-}
-
-/* Minimum readable sizes for meaningful UI/content. */
-.eyebrow,
-.mono,
-.caption,
-.byline,
-.utility,
-.doc-fileline,
-.publication-kicker,
-.publication-meta,
-.remilia-signal,
-.daily-deck,
-.daily-feature-meta,
-.daily-topline,
-.daily-message,
-.daily-rule,
-.cultural-wire-status,
-.cultural-wire-foot,
-.dispatch-file,
-.dispatch-author,
-.dispatch-metrics,
-.dispatch-source a{
-  color:var(--ink)!important;
-}
-
-/* Preserve true microtype only where it is decorative/filing metadata. */
-.eyebrow,
-.doc-fileline,
-.publication-kicker,
-.remilia-signal,
-.daily-deck,
-.daily-feature-meta,
-.daily-topline,
-.daily-rule,
-.cultural-wire-status,
-.cultural-wire-foot{
-  font-size:9px!important;
-}
-
-/* Raise useful metadata and interaction text above microtype. */
-.byline,
-.caption,
-.dispatch-file,
-.dispatch-metrics,
-.dispatch-source a{
-  font-size:10px!important;
-}
-
-.dispatch-author{
-  font-size:11px!important;
-  font-weight:700!important;
-  color:var(--ink)!important;
-}
-
-.dispatch-text{
-  font-size:17px!important;
-  line-height:1.3!important;
-  color:var(--ink)!important;
-}
-
-.story p,
-.section p,
-.intro p{
-  font-size:16px!important;
-  line-height:1.42!important;
-}
-
-/* Improve secondary-link legibility. */
-a,
-.print-action,
-.dispatch-source a{
-  color:var(--ink)!important;
-  text-decoration-thickness:1px;
-}
-
-/* ==================== CULTURAL DESK HIERARCHY POLISH ==================== */
-.cultural-wire-head{
-  margin-bottom:14px!important;
-}
-
-.cultural-wire-head p{
-  font-size:15px!important;
-  line-height:1.35!important;
-  color:var(--ink2)!important;
-}
-
-.cultural-dispatch{
-  grid-template-columns:140px minmax(0,1fr) 120px!important;
-  gap:18px!important;
-  padding:16px 0!important;
-}
-
-.cultural-dispatch:first-child,
-.cultural-dispatch:nth-child(2){
-  border-top:3px double var(--ink)!important;
-}
-
-.dispatch-file{
-  line-height:1.45!important;
-  letter-spacing:.02em!important;
-}
-
-.dispatch-file .primary-wire{
-  font-weight:700!important;
-  color:var(--ink)!important;
-}
-
-.dispatch-metrics{
-  margin-top:8px!important;
-  color:var(--soft)!important;
-}
-
-.dispatch-source{
-  justify-content:flex-start!important;
-  padding-top:2px!important;
-}
-
-.dispatch-source a{
-  white-space:nowrap!important;
-  font-weight:700!important;
-}
-
-.cultural-wire-foot{
-  color:var(--ink)!important;
-  border-top:1px solid var(--ink)!important;
-}
-
-@media(max-width:900px){
-  .cultural-dispatch{
-    grid-template-columns:120px minmax(0,1fr) 110px!important;
-  }
-}
-
-@media(max-width:650px){
-  .cultural-dispatch{
-    grid-template-columns:1fr!important;
-    gap:6px!important;
-  }
-  .dispatch-source{
-    padding-top:2px!important;
-  }
-  .dispatch-text{
-    font-size:16px!important;
-  }
-}
-
-
-/* ==================== EXISTING COPY DESK — DAILY HOUSE NOTE ==================== */
-.copy-note-daily{
-  padding:34px 0 32px;
-  text-align:center;
-}
-.copy-note-kicker{
-  font-size:10px!important;
-  font-weight:700;
-  color:var(--ink)!important;
-  margin-bottom:8px;
-}
-.copy-note-topline{
-  display:flex;
-  justify-content:center;
-  gap:18px;
-  font-size:9px!important;
-  color:var(--ink)!important;
-  margin-bottom:12px;
-}
-.copy-note-quote{
-  margin:0 auto 14px;
-  max-width:820px;
-  padding:0;
-  border:0;
-  font:700 clamp(28px,4.2vw,48px)/1.02 "Times New Roman",Times,serif;
-  color:var(--ink)!important;
-}
-.copy-note-bottom{
-  display:flex;
-  justify-content:center;
-  gap:24px;
-  font-size:9px!important;
-  color:var(--ink)!important;
-}
-.copy-note-bottom a{
-  color:var(--ink)!important;
-  font-weight:700;
-}
-@media(max-width:650px){
-  .copy-note-topline,
-  .copy-note-bottom{
-    display:grid;
-    gap:4px;
-  }
-}
-
-
-/* ==================== FRONT PAGE / TOP DESK REFRESH ==================== */
-.intro{
-  padding-top:22px!important;
-  padding-bottom:22px!important;
-}
-.intro .big-head{
-  max-width:720px;
-  margin-bottom:10px!important;
-}
-.intro p{
-  max-width:720px;
-}
-.intro-secondary{
-  margin-top:10px!important;
-  font-size:15px!important;
-  line-height:1.38!important;
-}
-.intro-foot{
-  margin-top:18px!important;
-}
-
-
-/* ============================================================
-   MLP COPYDESK 95 — FINAL NEWSPAPER GRID
-   One page, one rhythm, no decorative dead space.
-   ============================================================ */
-:root{
-  --page-gutter:22px;
-  --section-space:28px;
-  --headline-lg:36px;
-  --body-copy:15px;
-  --meta-copy:10px;
-  --rule:#292520;
-}
-
-/* The Windows shell stays software; the paper stays newspaper. */
-.paper{
-  overflow:visible!important;
-}
-.feed{
-  padding:0 var(--page-gutter)!important;
-}
-.intro{
-  display:block!important;
-  padding:28px var(--page-gutter) 26px!important;
-  border-bottom:2px solid var(--rule)!important;
-}
-.front-start{
-  max-width:900px;
-}
-.paper .big-head{
-  margin:7px 0 10px!important;
-  max-width:900px!important;
-  font-size:clamp(34px,4.2vw,48px)!important;
-  line-height:.98!important;
-}
-.paper .deck{
-  max-width:840px!important;
-  margin:0!important;
-  font-size:16px!important;
-  line-height:1.32!important;
-}
-
-/* One section system. */
-.feed > .section,
-.feed > .cultural-wire-live{
-  margin:0!important;
-  padding:var(--section-space) 0!important;
-  border-top:0!important;
-  border-bottom:1px solid var(--rule)!important;
-}
-.feed > .cultural-wire-live{
-  border-bottom:1px solid var(--rule)!important;
-}
-.section-head,
-.cultural-wire-head,
-.daily-feature-head{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) minmax(260px,.78fr)!important;
-  gap:28px!important;
-  align-items:end!important;
-  margin:0 0 16px!important;
-}
-.section-head h2,
-.cultural-wire-head h2,
-.daily-feature-head h2,
-#links h2,
-.mlpify-title{
-  margin:5px 0 0!important;
-  font-family:"Times New Roman",Times,serif!important;
-  font-size:clamp(28px,3.4vw,var(--headline-lg))!important;
-  line-height:1!important;
-  letter-spacing:-.015em!important;
-  font-weight:700!important;
-}
-.section-head p,
-.cultural-wire-head p,
-.section-side p,
-#links p,
-#mlpify p{
-  margin:0!important;
-  max-width:620px!important;
-  font-family:"Times New Roman",Times,serif!important;
-  font-size:var(--body-copy)!important;
-  line-height:1.32!important;
-  color:var(--ink2)!important;
-}
-.section-side{
-  display:grid;
-  gap:12px;
-  justify-items:start;
-}
-
-/* Keep metadata crisp and intentionally subordinate. */
-.paper .eyebrow,
-.paper .mono,
-.house-note-meta,
-.copy-note-bottom,
-.cultural-wire-status,
-.cultural-wire-foot{
-  font-size:var(--meta-copy)!important;
-  line-height:1.25!important;
-}
-.cultural-wire-status{
-  text-align:right;
-}
-
-/* Daily house note follows same section rhythm. */
-.house-note-section .copy-note-quote{
-  max-width:900px!important;
-  margin:8px 0 14px!important;
-  padding:0!important;
-  border:0!important;
-  font:700 clamp(25px,3.2vw,38px)/1.04 "Times New Roman",Times,serif!important;
-  color:var(--ink)!important;
-}
-.house-note-meta{
-  display:grid;
-  gap:3px;
-  text-align:right;
-}
-.copy-note-bottom{
-  display:flex;
-  justify-content:space-between;
-  gap:16px;
-  padding-top:8px;
-  border-top:1px solid var(--rule);
-}
-
-/* Operator archive is content, not a separate app surface. */
-.operator-tools{
-  margin-top:4px!important;
-}
-.operator-grid{
-  margin-top:18px!important;
-}
-.load-row{
-  padding-top:18px!important;
-}
-
-/* Classifieds align with every other section. */
-.classified-head{display:none!important}
-.classified-actions{display:none!important}
-.classified-grid{
-  border-top:1px solid var(--rule);
-}
-
-/* MLPIFY and Links use the same two-column editorial grid. */
-.mlpify-grid,
-.links-grid{
-  grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)!important;
-  gap:28px!important;
-  align-items:start;
-}
-#links h2{
-  font-size:clamp(28px,3.4vw,var(--headline-lg))!important;
-}
-
-/* Remove leftover decorative production markers if any survive. */
-.sheet-mark,
-.endless{
-  display:none!important;
-}
-
-/* Footer is a restrained newspaper colophon. */
-.footer{
-  margin:0 var(--page-gutter)!important;
-  padding:14px 0 18px!important;
-  border-top:1px solid var(--rule)!important;
-  display:grid!important;
-  grid-template-columns:1fr 1fr 1fr!important;
-  gap:12px!important;
-  font-size:9px!important;
-}
-.footer span:nth-child(2){text-align:center}
-.footer span:nth-child(3){text-align:right}
-
-/* Tablet / mobile: preserve the same reading order. */
-@media(max-width:900px){
-.section-head,
-  .cultural-wire-head,
-  .daily-feature-head,
-  .mlpify-grid,
-  .links-grid{
-    grid-template-columns:1fr!important;
-    gap:10px!important;
-  }
-  .cultural-wire-status,
-  .house-note-meta{
-    text-align:left!important;
-  }
-}
-@media(max-width:620px){
-  :root{--page-gutter:14px;--section-space:24px}
-  .intro{padding-left:var(--page-gutter)!important;padding-right:var(--page-gutter)!important}
-  .front-actions a:nth-child(1),
-  .footer{grid-template-columns:1fr!important}
-  .footer span{text-align:left!important}
-}
-
-
-/* ============================================================
-   GAMES / THE MLP MINI
-   Deterministic 5x5 crossword; isolated from retired Daily UI.
-   ============================================================ */
-.games-section{position:relative}
-.games-head{align-items:end!important}
-.games-meta{
-  display:flex;
-  justify-content:flex-end;
-  gap:14px;
-  flex-wrap:wrap;
-  text-align:right;
-}
-.mini-intro{
-  display:flex;
-  justify-content:space-between;
-  align-items:baseline;
-  gap:18px;
-  margin:-4px 0 18px;
-}
-.mini-intro p{
-  margin:0;
-  font:15px/1.3 "Times New Roman",Times,serif;
-}
-.mini-timer{
-  min-width:54px;
-  text-align:right;
-  font-weight:700;
-}
-.mini-layout{
-  display:grid;
-  grid-template-columns:minmax(270px,390px) minmax(0,1fr);
-  gap:34px;
-  align-items:start;
-}
-.mini-game{min-width:0}
-.mini-grid{
-  width:min(100%,390px);
-  aspect-ratio:1/1;
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  grid-template-rows:repeat(5,1fr);
-  border:2px solid var(--ink);
-  background:var(--ink);
-  gap:1px;
-  user-select:none;
-}
-.mini-cell{
-  position:relative;
-  display:grid;
-  place-items:center;
-  min-width:0;
-  border:0;
-  padding:0;
-  background:var(--paper);
-  color:var(--ink);
-  font:700 clamp(25px,5vw,44px)/1 "Times New Roman",Times,serif;
-  text-transform:uppercase;
-  cursor:pointer;
-  border-radius:0;
-}
-.mini-cell:hover{background:#eee9dc}
-.mini-cell.selected{outline:3px solid var(--ink);outline-offset:-3px}
-.mini-cell.in-word:not(.selected){background:#e8e2d3}
-.mini-cell.bad{box-shadow:inset 0 0 0 3px #6d201a}
-.mini-cell .num{
-  position:absolute;
-  top:3px;
-  left:4px;
-  font:700 9px/1 "Courier New",Courier,monospace;
-}
-.mini-message{
-  min-height:16px;
-  margin:10px 0 8px;
-  font-size:10px!important;
-  font-weight:700;
-}
-.mini-actions{
-  display:flex;
-  gap:7px;
-  flex-wrap:wrap;
-}
-.mini-clues{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:28px;
-  border-top:2px solid var(--ink);
-  padding-top:10px;
-}
-.clue-title{
-  padding-bottom:6px;
-  border-bottom:1px solid var(--ink);
-  font-size:10px!important;
-  font-weight:700;
-}
-.clue-list{
-  list-style:none;
-  margin:0;
-  padding:0;
-}
-.clue-list li{
-  display:grid;
-  grid-template-columns:24px minmax(0,1fr);
-  gap:7px;
-  padding:8px 0;
-  border-bottom:1px dotted var(--line2);
-  font:14px/1.25 "Times New Roman",Times,serif;
-  cursor:pointer;
-}
-.clue-list li:hover,
-.clue-list li.active{font-weight:700}
-.clue-list .clue-num{
-  font:700 10px/1.4 "Courier New",Courier,monospace;
-}
-.mini-foot{
-  display:flex;
-  justify-content:space-between;
-  gap:14px;
-  margin-top:18px;
-  padding-top:8px;
-  border-top:1px solid var(--ink);
-  font-size:9px!important;
-}
-@media(max-width:820px){
-  .games-meta{justify-content:flex-start;text-align:left}
-  .mini-layout{grid-template-columns:1fr;gap:24px}
-  .mini-grid{margin-inline:auto}
-}
-@media(max-width:560px){
-  .mini-clues{grid-template-columns:1fr;gap:18px}
-  .mini-intro{align-items:flex-start}
-  .mini-cell .num{top:2px;left:3px;font-size:8px}
-}
-
-
-/* ==================== THE MLP MINI / HOW TO PLAY ==================== */
-.mini-how-body{
-  max-width:560px;
-}
-.mini-how-body p{
-  font-family:"MS Sans Serif",Arial,sans-serif!important;
-  font-size:12px!important;
-  line-height:1.45!important;
-  color:#111!important;
-}
-.mini-how-rules{
-  display:grid;
-  gap:0;
-  margin:12px 0 14px;
-  border-top:1px solid #777;
-  border-left:1px solid #777;
-  border-right:1px solid #fff;
-  border-bottom:1px solid #fff;
-  background:#eee;
-}
-.mini-how-rules > div{
-  display:grid;
-  grid-template-columns:86px minmax(0,1fr);
-  gap:12px;
-  padding:8px 9px;
-  border-bottom:1px solid #c6c6c6;
-  font:12px/1.35 "MS Sans Serif",Arial,sans-serif;
-}
-.mini-how-rules > div:last-child{border-bottom:0}
-.mini-how-rules b{
-  font-family:"Courier New",Courier,monospace;
-  font-size:10px;
-}
-.mini-how-note{
-  margin:12px 0 0!important;
-  padding-top:9px;
-  border-top:1px solid #777;
-  font-size:9px!important;
-}
-@media(max-width:560px){
-  .mini-how-rules > div{
-    grid-template-columns:1fr;
-    gap:3px;
-  }
-}
-
-
-/* ==================== MLPIFY / SAMPLE OUTPUT ==================== */
-.mlpify-editorial{
-  display:flex;
-  flex-direction:column;
-  min-width:0;
-}
-.mlpify-sample{
-  margin:18px 0 0;
-  padding:8px;
-  border:1px solid var(--ink);
-  background:var(--paper2);
-}
-.mlpify-sample img{
-  display:block;
-  width:100%;
-  height:auto;
-  aspect-ratio:1/1;
-  object-fit:cover;
-  object-position:center;
-  border:1px solid var(--line2)!important;
-  background:var(--paper);
-  filter:none!important;
-  opacity:1!important;
-  mix-blend-mode:normal!important;
-}
-.mlpify-sample figcaption{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  margin-top:7px;
-  font-size:9px!important;
-  color:var(--ink)!important;
-}
-@media(max-width:900px){
-  .mlpify-sample{max-width:520px}
-}
-@media(max-width:620px){
-  .mlpify-sample figcaption{display:grid;gap:2px}
-}
-
-
-/* ============================================================
-   CREATIVE DIRECTION PASS / V16
-   Reduction, hierarchy, alignment, continuous newspaper rhythm.
-   ============================================================ */
-:root{
-  --cd-red:#7f241b;
-  --cd-rule:#2d2924;
-  --cd-meta:#4b463f;
-}
-
-/* Red is now categorical, not decorative. */
-.paper .eyebrow,
-.cultural-wire-kicker{
-  color:var(--cd-red)!important;
-}
-.paper .mono,
-.cultural-wire-status,
-.cultural-wire-foot,
-.games-meta,
-.mini-foot,
-.copy-note-bottom,
-.house-note-meta{
-  color:var(--cd-meta)!important;
-}
-
-/* Remove legacy decorative filing/stamp treatments. */
-.filed,.filed-box,.filed-stamp,.stamp,.operator-filed{
-  display:none!important;
-}
-
-/* Compact contents line: the map of the paper. */
-.paper-index{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:8px;
-  padding:10px var(--page-gutter);
-  border-bottom:1px solid var(--cd-rule);
-  font-size:9px!important;
-  font-weight:700;
-  letter-spacing:.035em;
-  background:var(--paper);
-}
-.paper-index a{
-  color:var(--ink)!important;
-  text-decoration:none;
-}
-.paper-index a:hover{
-  text-decoration:underline;
-}
-.paper-index span{
-  color:var(--soft);
-}
-
-/* One continuous publication rhythm. */
-.feed > .section,
-.feed > .cultural-wire-live{
-  padding-top:30px!important;
-  padding-bottom:30px!important;
-  border-bottom:1px solid var(--cd-rule)!important;
-}
-.section-head,
-.cultural-wire-head,
-.daily-feature-head{
-  margin-bottom:18px!important;
-}
-.paper .eyebrow{
-  margin-bottom:7px!important;
-  font-size:9px!important;
-  line-height:1.15!important;
-  letter-spacing:.055em!important;
-}
-.section-head h2,
-.cultural-wire-head h2,
-.daily-feature-head h2,
-#links h2,
-.mlpify-title{
-  margin-top:0!important;
-}
-.section-head p,
-.cultural-wire-head p,
-.section-side p,
-#links p,
-#mlpify p{
-  line-height:1.38!important;
-}
-
-/* Metadata behaves like one editorial system. */
-.paper .mono,
-.cultural-wire-status,
-.cultural-wire-foot,
-.games-meta,
-.mini-foot,
-.copy-note-bottom,
-.house-note-meta{
-  font-family:"Courier New",Courier,monospace!important;
-  font-size:9px!important;
-  line-height:1.25!important;
-  letter-spacing:.015em!important;
-}
-
-/* Editorial matter stays open; borders belong to functional objects. */
-.house-note-section,
-#operators,
-#classifieds,
-#games,
-#links{
-  background:transparent!important;
-  box-shadow:none!important;
-}
-.copy-note-quote{
-  border:0!important;
-  background:transparent!important;
-}
-
-/* MLPIFY sample is evidence of output, not a hero advertisement. */
-.mlpify-sample{
-  margin-top:20px!important;
-  padding:6px!important;
-  border:1px solid var(--cd-rule)!important;
-  background:transparent!important;
-}
-.mlpify-sample img{
-  border:0!important;
-}
-.mlpify-sample figcaption{
-  padding-top:6px;
-  border-top:1px dotted var(--line2);
-}
-
-/* Functional controls remain software-like. */
-.btn,
-.nd-dialog-btn,
-.nd-control,
-input,
-textarea,
-select{
-  border-radius:0!important;
-}
-
-/* Keep footer restrained. */
-.footer{
-  color:var(--cd-meta)!important;
-}
-
-/* Mobile contents line remains readable, not sticky or app-like. */
-@media(max-width:620px){
-  .paper-index{
-    gap:6px;
-    padding-top:9px;
-    padding-bottom:9px;
-    line-height:1.5!important;
-  }
-  .feed > .section,
-  .feed > .cultural-wire-live{
-    padding-top:25px!important;
-    padding-bottom:25px!important;
-  }
-}
-
-
-/* ==================== V16.1 / FILED BADGE CORRECTION ==================== */
-.section-head::after,
-.section-head:after{
-  content:none!important;
-  display:none!important;
-}
-
-
-/* ==================== V16.2 / FRONT PAGE CLEANUP ==================== */
-.front-start{
-  max-width:860px!important;
-}
-.front-start .big-head{
-  margin-bottom:9px!important;
-}
-.front-start .deck{
-  max-width:780px!important;
-}
-.intro{
-  padding-top:24px!important;
-  padding-bottom:24px!important;
-}
-.paper-index{
-  border-top:0!important;
-}
-
-
-/* ==================== V16.3 / SHIP LOCK ==================== */
-.section-head::after,
-.section-head:after{
-  content:none!important;
-  display:none!important;
-}
-.front-actions{display:none!important}
-.paper-index a:focus-visible{
-  outline:1px dotted var(--ink);
-  outline-offset:3px;
-}
-
-
-/* ==================== V16.4 / MLP MINI HELP FIX ==================== */
-#miniHowBtn,
-#miniHowClose,
-#miniHowCloseTop{
-  cursor:pointer!important;
-}
-
-
-/* ==================== V16.5 / OPERATOR PERFORMANCE ==================== */
-#findBtn:disabled,
-#randomBtn:disabled{
-  cursor:wait!important;
-}
-
 </style>
 </head>
 <body>
@@ -2256,7 +1340,7 @@ select{
   <div class="nd-titlebar">
     <div class="nd-titleleft">
       <div class="nd-icon">MLP</div>
-      <div class="nd-titletext">FRONT_PAGE.TXT - MLP CopyDesk 95</div>
+      <div class="nd-titletext">MLP NEWS DESK 95 — CURRENT EDITION / COPY DESK</div>
     </div>
     <div class="nd-controls" aria-hidden="true">
       <button class="nd-control" tabindex="-1">_</button>
@@ -2267,7 +1351,7 @@ select{
   <div class="nd-menubar">
     <div class="nd-menu"><button class="nd-menu-btn">File</button><div class="nd-dropdown">
       <button class="nd-item" data-nd="front">Current Edition <span class="shortcut">Ctrl+1</span></button>
-      <button class="nd-item" data-nd="archive">Open Games...</button>
+      <button class="nd-item" data-nd="archive">Open Milady Daily...</button>
       <div class="nd-sep"></div>
       <button class="nd-item" data-nd="mlpify">Open Print Department...</button>
       <button class="nd-item" data-nd="links">Publication References...</button>
@@ -2282,13 +1366,15 @@ select{
       <button class="nd-item" data-nd="front">Front Page</button>
       <button class="nd-item" data-nd="operators">Operator File <span class="shortcut">Ctrl+2</span></button>
       <button class="nd-item" data-nd="classifieds">Classified Advertising <span class="shortcut">Ctrl+3</span></button>
-      <button class="nd-item" data-nd="archive">Games <span class="shortcut">Ctrl+5</span></button>
+      <button class="nd-item" data-nd="archive">Milady Daily <span class="shortcut">Ctrl+5</span></button>
       <div class="nd-sep"></div>
       <button class="nd-item" data-nd="themes">Desktop Theme...</button>
     </div></div>
     <div class="nd-menu"><button class="nd-menu-btn">Insert</button><div class="nd-dropdown">
       <button class="nd-item" data-nd="newclassified">Classified Advertisement...</button>
       <button class="nd-item" data-nd="image">Image to Print Department...</button>
+      <div class="nd-sep"></div>
+      <button class="nd-item disabled-note" disabled>RemiliaNET Wire Item...</button>
     </div></div>
     <div class="nd-menu"><button class="nd-menu-btn">Tools</button><div class="nd-dropdown">
       <button class="nd-item" data-nd="mlpify">MLPIFY Image... <span class="shortcut">Ctrl+4</span></button>
@@ -2297,15 +1383,16 @@ select{
       <button class="nd-item" data-nd="themes">Preferences / Themes...</button>
     </div></div>
     <div class="nd-menu"><button class="nd-menu-btn">Help</button><div class="nd-dropdown">
-      <button class="nd-item" data-nd="dailyhelp">The MLP Mini — How to Play...</button>
+      <button class="nd-item" data-nd="dailyhelp">Milady Daily — How to Play...</button>
+      <button class="nd-item" data-nd="dailyabout">About Milady Daily...</button>
       <div class="nd-sep"></div>
-      <button class="nd-item" data-nd="about">About MLP CopyDesk 95...</button>
+      <button class="nd-item" data-nd="about">About MLP News Desk 95...</button>
       <button class="nd-item" data-nd="links">Official Links...</button>
     </div></div>
   </div>
   <div class="nd-contextbar" id="ndContextBar" aria-live="polite">
     <div class="nd-context-primary" id="ndContextPrimary">CURRENT EDITION</div>
-    <div class="nd-context-detail" id="ndContextDetail">FRONT_PAGE.TXT / PAGE 01</div>
+    <div class="nd-context-detail" id="ndContextDetail">FRONT PAGE / PROOF 01</div>
     <div class="nd-context-state"><span class="nd-context-led"></span><span id="ndContextState">STATUS: READY</span></div>
   </div>
   <div class="nd-workspace">
@@ -2328,81 +1415,52 @@ select{
   </header>
 
   <section class="intro" id="printer">
-    <div class="front-start">
-      <div class="eyebrow">Front page / Start here</div>
-      <h1 class="big-head">GMLP.</h1>
-      <p class="deck">You’ve found the working publication of Milady Line Printer — part cultural wire, part collection archive, part community paper.</p>
-</div>
+    <div>
+      <div class="eyebrow">Front page / the printer</div>
+      <h1 class="big-head">The paper never ends.</h1>
+      <p class="deck">Milady Line Printer files 620 Milady-derived operators through the visual language of vintage line printing — part portrait, part document, part artifact. This desk assembles the record.</p>
+      <div class="dateline"><span>Remilia makes culture.</span><span>MLP prints the record.</span></div>
+    </div>
+    <aside class="wire">
+      <div class="wire-head"><h2>Wire Desk</h2><span class="live">RemiliaNET standby</span></div>
+      <div class="wire-row"><time>STATUS</time><b>NETWORK</b><span>Network connection unavailable.</span></div>
+      <div class="wire-row"><time>LOCAL</time><b>@mlp_eth</b><span>Printer online. Community tools remain available.</span></div>
+      <div class="wire-row"><time>NEXT</time><b>WIRE</b><span>Network transmissions will print here when access is active.</span></div>
+    </aside>
   </section>
-  <nav class="paper-index mono" aria-label="Page contents">
-    <a href="#culturalDesk">CULTURE</a>
-    <span>/</span>
-    <a href="#houseNote">HOUSE NOTE</a>
-    <span>/</span>
-    <a href="#operators">OPERATORS</a>
-    <span>/</span>
-    <a href="#classifieds">CLASSIFIEDS</a>
-    <span>/</span>
-    <a href="#games">GAMES</a>
-    <span>/</span>
-    <a href="#mlpify">MLPIFY</a>
-    <span>/</span>
-    <a href="#links">LINKS</a>
-  </nav>
 
   <div class="feed">
-<section class="cultural-wire-live" id="culturalDesk">
-      <div class="cultural-wire-head">
-        <div>
-          <div class="eyebrow">Cultural desk / incoming wire</div>
-          <h2>Remilia never sleeps.</h2>
-          <p>The timeline is the wire. MLP prints a small selection of public Milady and Remilia transmissions worth reading.</p>
-        </div>
-        <div class="cultural-wire-status mono">
-          <span><span class="wire-led"></span> X WIRE ACTIVE</span>
-          <span id="culturalWireUpdated">FETCHING DISPATCHES...</span>
-        </div>
-      </div>
+    <div class="sheet-mark"><span>Sheet 001-A</span><span>continuous feed / scroll ↓</span></div>
 
-      <div id="culturalWireFeed" class="cultural-wire-feed" aria-live="polite">
-        <div class="cultural-wire-loading mono">RECEIVING CULTURAL WIRE...</div>
+    <article class="story split">
+      <div>
+        <div class="eyebrow">Lead story / cultural desk</div>
+        <h2>The culture refuses to log off.</h2>
+        <p>The desk preserves the texture of Milady-adjacent internet culture without flattening it into a dashboard. The machine does not explain the culture. It files what matters.</p>
+        <div class="byline">Filed by Milady Line Printer / cultural desk</div>
+        <a class="print-action" href="/daily.html">Play Milady Daily →</a>
       </div>
+      <div class="media-frame">
+        <div class="media-placeholder"><div><strong>Wire on standby</strong><span>Network media will print here when access is active.</span></div></div>
+        <div class="caption"><span>Network desk</span><span>Awaiting connection</span></div>
+      </div>
+    </article>
 
-      <div class="cultural-wire-foot mono">
-        <span>PUBLIC WIRE / CLEARED</span>
-        <span id="culturalWireCount">WIRE OPEN</span>
-      </div>
+    <section class="transmission">
+      <div class="eyebrow">Copy desk / house note</div>
+      <blockquote>“printers never sleep”</blockquote>
+      <div class="meta">MILADY LINE PRINTER / FILED FOR PRINT</div>
     </section>
 
-    <section class="section house-note-section" id="houseNote">
-      <div class="section-head compact-head">
-        <div>
-          <div class="eyebrow">From the copy desk / Daily file</div>
-          <h2>House Note</h2>
-        </div>
-        <div class="house-note-meta mono">
-          <span id="houseNoteNumber">NOTE# 001</span>
-          <span id="houseNoteDate">FILED TODAY</span>
-        </div>
-      </div>
-
-      <blockquote class="copy-note-quote" id="houseNoteQuote">Loading archive note…</blockquote>
-
-      <div class="copy-note-bottom mono">
-        <span id="houseNoteSource">REMILIA / ARCHIVE</span>
-        <a id="houseNoteLink" href="#" target="_blank" rel="noopener noreferrer">SOURCE →</a>
-      </div>
-    </section>
+    <div class="sheet-mark"><span>Sheet 001-B</span><span>personnel records / 620 operators</span></div>
 
     <section class="section" id="operators">
       <div class="section-head">
-        <div>
-          <div class="eyebrow">Operator file / Collection archive</div>
-          <h2>620 operators on file.</h2>
-        </div>
-        <p>Milady Line Printer reinterprets 620 Milady-derived characters through the visual language of vintage line printing — part portrait, part document, part artifact. The complete collection is filed below.</p>
+        <div><div class="eyebrow">The 620</div><h2>Operator File</h2></div>
+        <p>Each MLP is filed as a numbered operator inside the publication. Operator portraits are presented from their published token artwork without decorative filters or color treatment.</p>
       </div>
-<div class="operator-tools">
+
+      <div class="operator-tools">
         <div class="tool-group"><span id="galleryStatus" class="eyebrow" style="color:var(--soft)" aria-live="polite">Opening Operator File…</span></div>
         <div class="tool-group">
           <input id="tokenInput" class="input" inputmode="numeric" placeholder="Operator #" aria-label="Operator number">
@@ -2417,84 +1475,64 @@ select{
     </section>
 
     <section class="section" id="classifieds">
-  <div class="section-head">
-        <div>
-          <div class="eyebrow">Classifieds / Community board</div>
-          <h2>Notices from the network.</h2>
-        </div>
-        <div class="section-side">
-          <p>Buy, sell, trade, seek, offer. Approved community notices remain on the desk until they expire.</p>
-          <button id="postClassifiedBtn" class="btn dark" type="button">Submit Advertisement...</button>
-        </div>
-      </div>
+  <div class="classified-head">Classified Advertising</div>
+  <div class="classified-actions">
+    <div><div class="eyebrow" style="color:var(--soft)">Community bulletin board</div><div class="note">Approved notices print here until they expire.</div></div>
+    <button id="postClassifiedBtn" class="btn dark" type="button">Submit Advertisement...</button>
+  </div>
   <div id="classifiedGrid" class="classified-grid"><div class="classified-empty">Loading approved classifieds…</div></div>
   
 </section>
 
-    <section class="section games-section" id="games">
-      <div class="section-head games-head">
+    <div class="sheet-mark"><span>Sheet 001-C</span><span>permanent file</span></div>
+
+    <section class="section milady-daily" id="miladyDaily">
+      <div class="mono" style="font-size:9px;margin-bottom:8px"><a href="/" style="color:inherit">← RETURN TO MLP NEWS DESK 95 / FRONT PAGE</a></div>
+      <div class="daily-feature-head">
         <div>
-          <div class="eyebrow">Games</div>
-          <h2>The MLP Mini</h2>
+          <div class="eyebrow">Remilia daily diversion / copy desk</div>
+          <h2>MILADY DAILY</h2>
+          <div class="daily-deck mono">THE DAILY REMILIA FILE</div>
         </div>
-        <div class="games-meta mono">
-          <span>DAILY CROSSWORD</span>
-          <span id="miniPuzzleNo">PUZZLE 001</span>
-          <span>5 × 5</span>
-        </div>
-      </div>
-
-      <div class="mini-intro">
-        <p>A new 5 × 5 crossword every day.</p>
-        <div class="mini-timer mono" id="miniTimer">00:00</div>
-      </div>
-
-      <div class="mini-layout">
-        <div class="mini-game">
-          <div id="miniGrid" class="mini-grid" role="grid" aria-label="The MLP Mini crossword"></div>
-
-          <div id="miniMessage" class="mini-message mono" aria-live="polite">SELECT A SQUARE TO BEGIN.</div>
-
-          <div class="mini-actions">
-            <button class="btn" id="miniHowBtn" type="button">How to Play</button>
-            <button class="btn" id="miniCheckBtn" type="button">Check</button>
-            <button class="btn" id="miniClearBtn" type="button">Clear</button>
-            <button class="btn dark" id="miniShareBtn" type="button" disabled>Copy Result</button>
-          </div>
-        </div>
-
-        <div class="mini-clues">
-          <div class="clue-column">
-            <div class="clue-title mono">ACROSS</div>
-            <ol id="miniAcross" class="clue-list"></ol>
-          </div>
-          <div class="clue-column">
-            <div class="clue-title mono">DOWN</div>
-            <ol id="miniDown" class="clue-list"></ol>
-          </div>
+        <div class="daily-feature-meta mono">
+          <span id="dailyHeaderPuzzle">PUZZLE 001</span>
+          <span>5 LETTERS / 6 TRIES</span>
+          <span>ONE WORD / ONE DAY / REMILIA</span>
         </div>
       </div>
 
-      <div class="mini-foot mono">
-        <span>ONE GRID / ONE DAY</span>
-        <span>PROGRESS SAVED ON THIS DEVICE</span>
+      <div class="daily-shell">
+        <div class="daily-topline mono">
+          <span id="dailyPuzzleNo">PUZZLE NO. 001</span>
+          <span>FIVE LETTERS / SIX TRIES</span>
+        </div>
+
+        <div id="dailyBoard" class="daily-board" aria-label="Milady Daily puzzle board"></div>
+
+        <div id="dailyMessage" class="daily-message mono" aria-live="polite">REMILIA IS ONLINE.</div>
+
+        <div id="dailyKeyboard" class="daily-keyboard" aria-label="Milady Daily keyboard"></div>
+
+        <div class="daily-actions">
+          <button class="btn" id="dailyRulesBtn" type="button">Rules</button>
+          <button class="btn" id="dailyStatsBtn" type="button">Statistics</button>
+          <button class="btn dark" id="dailyShareBtn" type="button" disabled>Copy Result</button>
+        </div>
+
+        <div id="dailyFileNote" class="daily-file-note" hidden></div>
+        <div id="dailyStats" class="daily-stats" hidden></div>
+
+        <div class="daily-rule mono">ONE WORD / ONE DAY / THE NETWORK REMEMBERS</div>
       </div>
     </section>
 
     <section class="section" id="mlpify">
       <div class="mlpify-grid">
-        <div class="mlpify-editorial">
-          <div class="eyebrow">MLPIFY / Print your own</div>
-          <h2 class="mlpify-title">Make it yours.</h2>
-          <p>Turn an image into an MLP-style line print. Your image, one house treatment, one printable output.</p>
-
-          <figure class="mlpify-sample">
-            <img src="/assets/mlpify-sample.png" alt="Example MLPIFY line-print output">
-            <figcaption class="mono">
-              <span>SAMPLE OUTPUT / MLPIFY</span>
-              <span>HOUSE TREATMENT</span>
-            </figcaption>
-          </figure>
+        <div>
+          <div class="eyebrow">Print department</div>
+          <h2 class="mlpify-title">MLPIFY</h2>
+          <p class="deck">The MLPIFY renderer turns uploaded images into a single MLP print treatment, presented like a back-page print service.</p>
+          <p class="mono" style="font-size:10px;line-height:1.55;color:var(--soft)">1100 × 1400 / warm parchment / muted ink / line matrix / one official output style.</p>
         </div>
 
         <div class="order-form">
@@ -2530,15 +1568,15 @@ select{
     <section class="transmission">
       <div class="eyebrow">From the printer</div>
       <blockquote>“The record only becomes history if somebody keeps it.”</blockquote>
-      <div class="meta">Milady Line Printer / GMLP♡</div>
+      <div class="meta">Milady Line Printer / standing note</div>
     </section>
 
     <section class="section" id="links">
       <div class="links-grid">
         <div>
-          <div class="eyebrow">Reference desk / Official links</div>
-          <h2>Official links</h2>
-          <p>Verified destinations for Milady Line Printer.</p>
+          <div class="eyebrow">Reference desk</div>
+          <h2 style="font-size:clamp(46px,6vw,76px);font-weight:500;letter-spacing:-.045em;line-height:.9;margin:7px 0 18px">Official links</h2>
+          <p>Use this desk before clicking, joining or verifying anything related to Milady Line Printer.</p>
           <div class="contract"><code id="contract">0x88faff5ba343a9ba7ca9502723b28e64089e3dc8</code><button id="copyBtn" class="btn">Copy</button></div>
         </div>
         <div class="link-list">
@@ -2550,12 +1588,18 @@ select{
         </div>
       </div>
     </section>
-</div>
+
+    <section class="endless">
+      <div class="eyebrow">End of current edition</div>
+      <h2>The printer keeps going.</h2>
+      <p class="mono" style="font-size:9px;text-transform:uppercase;letter-spacing:.13em">New records are filed as they arrive.</p>
+    </section>
+  </div>
 
   <footer class="footer">
-    <span>MLP CopyDesk 95</span>
-    <span>The network makes culture.</span>
-    <span>MLP prints the record.</span>
+    <span>Milady Line Printer / 620 Operators</span>
+    <span class="red">The printer never stops.</span>
+    <span>miladylineprinter.xyz / @mlp_eth</span>
   </footer>
 </main>
 
@@ -2610,15 +1654,65 @@ select{
 </div>
 
 
+<div class="nd-dialog" id="ndDailyRules" aria-hidden="true">
+  <div class="nd-window" role="dialog" aria-modal="true" aria-labelledby="ndDailyRulesTitle">
+    <div class="nd-dialog-title">
+      <span id="ndDailyRulesTitle">Milady Daily — How to Play</span>
+      <button class="nd-control" data-nd-close="ndDailyRules">×</button>
+    </div>
+    <div class="nd-dialog-body">
+      <p><b>Guess the MILADY DAILY in six tries.</b></p>
+      <p>Each guess must be a valid five-letter word. Type your guess, then press <b>ENTER</b> to submit it.</p>
 
+      <div class="daily-help-example" aria-label="Example guess">
+        <div class="daily-help-word">
+          <span class="daily-help-cell correct">P</span>
+          <span class="daily-help-cell absent">R</span>
+          <span class="daily-help-cell present">E</span>
+          <span class="daily-help-cell absent">S</span>
+          <span class="daily-help-cell absent">S</span>
+        </div>
+      </div>
+
+      <div class="daily-help-legend">
+        <div><span class="daily-help-swatch correct"></span><b>GREEN</b> — correct letter, correct position.</div>
+        <div><span class="daily-help-swatch present"></span><b>GOLD</b> — correct letter, wrong position.</div>
+        <div><span class="daily-help-swatch absent"></span><b>GRAY</b> — letter is not in the word.</div>
+      </div>
+
+      <p>A new Milady/Remilia-related word is filed each day. Finish the puzzle to unlock the day’s <b>FILE NOTE</b> and learn its connection to the culture.</p>
+
+      <div class="mono" style="font-size:9px;border-top:1px solid #777;padding-top:8px;margin-top:10px">
+        ONE PUZZLE / DAILY / LOCAL PROGRESS SAVED
+      </div>
+
+      <div class="nd-actions">
+        <button class="nd-dialog-btn" id="ndBeginDaily" type="button">Begin Puzzle</button>
+      </div>
+    </div>
+  </div>
 </div>
 
-
+<div class="nd-dialog" id="ndDailyAbout" aria-hidden="true">
+  <div class="nd-window" role="dialog" aria-modal="true" aria-labelledby="ndDailyAboutTitle">
+    <div class="nd-dialog-title">
+      <span id="ndDailyAboutTitle">About Milady Daily</span>
+      <button class="nd-control" data-nd-close="ndDailyAbout">×</button>
+    </div>
+    <div class="nd-dialog-body">
+      <div style="font:700 24px 'Times New Roman',Times,serif;margin-bottom:10px">Milady Daily</div>
+      <p>A five-letter daily copy-desk puzzle built from Milady and Remilia vocabulary.</p>
+      <p>Answer words are curated from the culture. Ordinary five-letter words may be used as guesses. Completing the puzzle unlocks a short File Note explaining the day’s reference.</p>
+      <div class="nd-actions">
+        <button class="nd-dialog-btn" data-nd-close="ndDailyAbout">OK</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="nd-dialog" id="ndThemes" aria-hidden="true">
   <div class="nd-window" role="dialog" aria-modal="true" aria-labelledby="ndThemesTitle">
-    <div class="nd-dialog-title"><span id="ndThemesTitle">Desktop Themes — MLP CopyDesk 95</span><button class="nd-control" data-nd-close="ndThemes">×</button></div>
+    <div class="nd-dialog-title"><span id="ndThemesTitle">Desktop Themes — MLP News Desk 95</span><button class="nd-control" data-nd-close="ndThemes">×</button></div>
     <div class="nd-dialog-body">
       <div class="nd-dialog-row"><label for="ndThemeSelect">Theme:</label><select class="nd-select" id="ndThemeSelect">
         <option value="standard">MLP Standard</option>
@@ -2635,10 +1729,11 @@ select{
 </div>
 <div class="nd-dialog" id="ndAbout" aria-hidden="true">
   <div class="nd-window" role="dialog" aria-modal="true" aria-labelledby="ndAboutTitle">
-    <div class="nd-dialog-title"><span id="ndAboutTitle">About MLP CopyDesk 95</span><button class="nd-control" data-nd-close="ndAbout">×</button></div>
+    <div class="nd-dialog-title"><span id="ndAboutTitle">About MLP News Desk 95</span><button class="nd-control" data-nd-close="ndAbout">×</button></div>
     <div class="nd-dialog-body">
       <div style="font:700 24px Georgia,'Times New Roman',serif;margin-bottom:10px">Milady Line Printer</div>
-      <p>MLP CopyDesk 95 is the publishing desk for 620 Milady-derived operators filed through a vintage line-printer language.</p>
+      <p>MLP News Desk 95 is the publishing desk for 620 Milady-derived operators filed through a vintage line-printer language.</p>
+      <p style="margin-bottom:0">RemiliaNET-connected features remain on standby until access is active.</p>
       <div class="nd-actions"><button class="nd-dialog-btn" data-nd-close="ndAbout">OK</button></div>
     </div>
   </div>
@@ -2695,153 +1790,49 @@ function decodeAbiString(hex){
   for(let i=0;i<data.length;i+=2) out+=String.fromCharCode(parseInt(data.slice(i,i+2),16));
   try{return decodeURIComponent(escape(out))}catch{return out}
 }
-/* ==================== OPERATOR FILE / FAST DATA PATH ==================== */
-const TOKEN_CACHE_PREFIX='mlp-operator-v2:';
-const TOKEN_CACHE_TTL=7*24*60*60*1000;
-const TOKEN_CACHE_LIMIT=80;
-const tokenMemoryCache=new Map();
-const tokenUriMemoryCache=new Map();
-const tokenInflight=new Map();
-
-async function fetchWithTimeout(url,options={},timeout=3500){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),timeout);
-  try{
-    return await fetch(url,{...options,signal:controller.signal});
-  }finally{
-    clearTimeout(timer);
-  }
-}
-
-async function firstSuccessful(tasks,label='request'){
-  try{
-    return await Promise.any(tasks);
-  }catch(e){
-    throw new Error(`${label} unavailable`);
-  }
-}
-
 async function rpcCall(body){
-  return firstSuccessful(
-    RPCS.map(async url=>{
-      const r=await fetchWithTimeout(url,{
-        method:'POST',
-        headers:{'content-type':'application/json'},
-        body:JSON.stringify(body)
-      },3200);
+  let lastError;
+  for(const url of RPCS){
+    try{
+      const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok) throw new Error(`RPC ${r.status}`);
       const j=await r.json();
       if(j.error) throw new Error(j.error.message||'RPC error');
       return j.result;
-    }),
-    'RPC'
-  );
+    }catch(e){lastError=e}
+  }
+  throw lastError||new Error('RPC unavailable');
 }
-
 async function getTokenUri(id){
-  if(tokenUriMemoryCache.has(id)) return tokenUriMemoryCache.get(id);
-  const result=await rpcCall({
-    jsonrpc:'2.0',
-    id:1,
-    method:'eth_call',
-    params:[{to:CONTRACT,data:tokenUriCalldata(id)},'latest']
-  });
-  const uri=decodeAbiString(result);
-  tokenUriMemoryCache.set(id,uri);
-  return uri;
+  const result=await rpcCall({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:CONTRACT,data:tokenUriCalldata(id)},'latest']});
+  return decodeAbiString(result);
 }
-
 async function fetchJsonFromUri(uri){
-  const urls=uri.startsWith('ipfs://')
+  const tries = uri.startsWith('ipfs://')
     ? IPFS_GATEWAYS.map(g=>ipfsToGateway(uri,g))
     : [uri];
-
-  return firstSuccessful(
-    urls.map(async url=>{
-      const r=await fetchWithTimeout(url,{headers:{accept:'application/json'}},4200);
+  let last;
+  for(const url of tries){
+    try{
+      const r=await fetch(url);
       if(!r.ok) throw new Error(`metadata ${r.status}`);
       return await r.json();
-    }),
-    'metadata'
-  );
-}
-
-function readTokenCache(id){
-  if(tokenMemoryCache.has(id)) return tokenMemoryCache.get(id);
-  try{
-    const raw=localStorage.getItem(TOKEN_CACHE_PREFIX+id);
-    if(!raw) return null;
-    const entry=JSON.parse(raw);
-    if(!entry?.token || !entry?.savedAt || Date.now()-entry.savedAt>TOKEN_CACHE_TTL){
-      localStorage.removeItem(TOKEN_CACHE_PREFIX+id);
-      return null;
-    }
-    tokenMemoryCache.set(id,entry.token);
-    return entry.token;
-  }catch(e){
-    return null;
+    }catch(e){last=e}
   }
+  throw last||new Error('metadata unavailable');
 }
-
-function writeTokenCache(id,token){
-  tokenMemoryCache.set(id,token);
-  try{
-    localStorage.setItem(
-      TOKEN_CACHE_PREFIX+id,
-      JSON.stringify({savedAt:Date.now(),token})
-    );
-
-    /* Keep local storage bounded. */
-    const entries=[];
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i);
-      if(key?.startsWith(TOKEN_CACHE_PREFIX)){
-        try{
-          const item=JSON.parse(localStorage.getItem(key)||'{}');
-          entries.push([key,item.savedAt||0]);
-        }catch(e){}
-      }
-    }
-    if(entries.length>TOKEN_CACHE_LIMIT){
-      entries
-        .sort((a,b)=>a[1]-b[1])
-        .slice(0,entries.length-TOKEN_CACHE_LIMIT)
-        .forEach(([key])=>localStorage.removeItem(key));
-    }
-  }catch(e){}
-}
-
 async function fetchToken(id){
-  id=Number(id);
-
-  const cached=readTokenCache(id);
-  if(cached) return cached;
-
-  /* Multiple UI requests for the same operator share one network job. */
-  if(tokenInflight.has(id)) return tokenInflight.get(id);
-
-  const job=(async()=>{
-    const tokenURI=await getTokenUri(id);
-    const d=await fetchJsonFromUri(tokenURI);
-    const token={
-      id,
-      title:d.name||`Milady Line Printer #${id}`,
-      description:d.description||'Milady Line Printer operator.',
-      image:ipfsToGateway(d.image),
-      rawImage:d.image||'',
-      attributes:d.attributes||[],
-      opensea:`${OPENSEA_ASSET}/${id}`
-    };
-    writeTokenCache(id,token);
-    return token;
-  })();
-
-  tokenInflight.set(id,job);
-  try{
-    return await job;
-  }finally{
-    tokenInflight.delete(id);
-  }
+  const tokenURI=await getTokenUri(id);
+  const d=await fetchJsonFromUri(tokenURI);
+  return {
+    id,
+    title:d.name||`Milady Line Printer #${id}`,
+    description:d.description||'Milady Line Printer operator.',
+    image:ipfsToGateway(d.image),
+    rawImage:d.image||'',
+    attributes:d.attributes||[],
+    opensea:`${OPENSEA_ASSET}/${id}`
+  };
 }
 function operatorCard(t){
   const drip=(t.attributes||[]).find(a=>String(a.trait_type||'').toLowerCase().includes('drip'));
@@ -2861,11 +1852,11 @@ async function loadMore(){
   const start=visible+1,end=Math.min(visible+12,SUPPLY);
   btn.disabled=true;
   status.textContent=`Loading operator records ${start}–${end}…`;
-  const ids=Array.from({length:end-start+1},(_,i)=>start+i);
-  const arr=await Promise.all(ids.map(async id=>{
-    try{return await fetchToken(id)}
-    catch(e){return {id,title:`Milady Line Printer #${id}`,image:'',attributes:[],opensea:`${OPENSEA_ASSET}/${id}`}}
-  }));
+  const arr=[];
+  for(let id=start;id<=end;id++){
+    try{arr.push(await fetchToken(id))}
+    catch(e){arr.push({id,title:`Milady Line Printer #${id}`,image:'',attributes:[],opensea:`${OPENSEA_ASSET}/${id}`})}
+  }
   grid.insertAdjacentHTML('beforeend',arr.map(operatorCard).join(''));
   visible=end;
   status.textContent=`Operator File / ${visible} of ${SUPPLY} records loaded`;
@@ -2881,11 +1872,7 @@ async function selectToken(id){
     return;
   }
   el.classList.add('show');
-  el.innerHTML='<div class="notice">Opening operator record…</div>';
-  const findBtn=document.getElementById('findBtn');
-  const randomBtn=document.getElementById('randomBtn');
-  if(findBtn) findBtn.disabled=true;
-  if(randomBtn) randomBtn.disabled=true;
+  el.innerHTML='<div class="notice">Loading operator record…</div>';
   try{
     const t=await fetchToken(id);
     const traits=t.attributes.map(a=>`<div class="trait"><b>${escapeHtml(a.trait_type||'Trait')}</b><br>${escapeHtml(String(a.value??''))}</div>`).join('');
@@ -2903,24 +1890,8 @@ async function selectToken(id){
     el.scrollIntoView({behavior:'smooth',block:'center'});
   }catch(e){
     el.innerHTML='<div class="notice">This operator record is temporarily unavailable. Please try again.</div>';
-  }finally{
-    if(findBtn) findBtn.disabled=false;
-    if(randomBtn) randomBtn.disabled=false;
   }
 }
-function prefetchOperators(ids=[]){
-  const work=()=>ids
-    .filter(id=>Number.isInteger(id)&&id>=1&&id<=SUPPLY&&!readTokenCache(id))
-    .slice(0,6)
-    .forEach(id=>fetchToken(id).catch(()=>{}));
-
-  if('requestIdleCallback' in window){
-    requestIdleCallback(work,{timeout:2500});
-  }else{
-    setTimeout(work,900);
-  }
-}
-
 async function loadOperatorOnDuty(){
   const box=document.getElementById('miniOperatorArt');
   const num=document.getElementById('miniOperatorNum');
@@ -2982,7 +1953,7 @@ function render(img){
   document.getElementById('emptyPreview').style.display='none';
   document.getElementById('downloadBtn').disabled=false;
   document.getElementById('reprintBtn').disabled=false;
-  document.getElementById('printStatus').textContent='Output ready';if(typeof ndSetContext==='function')ndSetContext('mlpify','PROOF READY / 1100 × 1400','X WIRE: ACTIVE','active');
+  document.getElementById('printStatus').textContent='Output ready';if(typeof ndSetContext==='function')ndSetContext('mlpify','PROOF READY / 1100 × 1400','STATUS: READY','active');
 }
 function drawMlpLogoWatermark(ctx,W,H,pal){
   if(!mlpLogo.complete||!mlpLogo.naturalWidth)return;
@@ -3031,7 +2002,6 @@ document.querySelectorAll('.story,.transmission,.section').forEach(x=>observer.o
 
 loadOperatorOnDuty();
 loadMore();
-prefetchOperators([17,88,222,420,620]);
 
 const classifiedLabels={'wanted':'Wanted','for-sale':'For sale','seeking':'Seeking','help-wanted':'Help wanted','public-notice':'Milady Public Notice','personals':'Personals'};
 function validClassifiedUrl(v){if(!v)return'';try{const u=new URL(v,location.origin);return ['http:','https:'].includes(u.protocol)?u.href:''}catch{return''}}
@@ -3072,7 +2042,7 @@ document.getElementById('classifiedForm').addEventListener('submit',async e=>{
 loadClassifieds();
 
 
-/* ==================== MLP COPYDESK 95 ==================== */
+/* ==================== MLP NEWS DESK 95 ==================== */
 const ndRoot=document.documentElement;
 const ndStatus=document.getElementById('ndStatus');
 function ndSay(s){ndStatus.textContent=s;clearTimeout(ndSay.t);ndSay.t=setTimeout(()=>ndStatus.textContent='Ready — Copy Desk',2500)}
@@ -3089,7 +2059,7 @@ async function ndCommand(c){
     case'front':ndGo('printer','Front page / current edition');break;
     case'operators':ndGo('operators','Operator File opened');break;
     case'classifieds':ndGo('classifieds','Classified Advertising Desk opened');break;
-    case'archive':ndGo('games','Games opened');break;
+    case'archive':ndGo('miladyDaily','Milady Daily opened');break;
     case'mlpify':ndGo('mlpify','Print Department opened');break;
     case'links':ndGo('links','Reference Desk opened');break;
     case'find':ndGo('operators','Find Operator');setTimeout(()=>document.getElementById('tokenInput')?.focus(),400);break;
@@ -3100,8 +2070,8 @@ async function ndCommand(c){
       try{await navigator.clipboard.writeText(document.getElementById('contract')?.textContent||'');ndSay('Contract address copied')}catch{ndSay('Clipboard unavailable')}
       break;
     case'themes':ndOpen('ndThemes');break;
-    case'dailyhelp':{const d=document.getElementById('ndMiniHow');if(d){d.classList.add('open');d.setAttribute('aria-hidden','false');}}break;
-    
+    case'dailyhelp':ndOpen('ndDailyRules');break;
+    case'dailyabout':ndOpen('ndDailyAbout');break;
     case'about':ndOpen('ndAbout');break;
   }
 }
@@ -3161,8 +2131,8 @@ ndCommand=async function(c){
   if(c==='random')ndFlashStatus('FILED — random operator opened');
   if(c==='newclassified')ndFlashStatus('AD DESK — new submission form opened');
   if(c==='mlpify')ndFlashStatus('PRINT DEPT — ready');
-  if(c==='operators')ndFlashStatus('CURRENT EDITION — open');
-  if(c==='archive')ndFlashStatus('GAMES — puzzle open');
+  if(c==='operators')ndFlashStatus('OPERATOR FILE — open');
+  if(c==='archive')ndFlashStatus('MILADY DAILY — puzzle open');
 };
 
 const originalClassifiedSubmit=document.getElementById('classifiedForm');
@@ -3192,13 +2162,13 @@ const ndContextState=document.getElementById('ndContextState');
 const ndContexts={
   printer:{
     primary:'CURRENT EDITION',
-    detail:'FRONT_PAGE.TXT / PAGE 01',
+    detail:'FRONT PAGE / PROOF 01',
     state:'STATUS: READY',
     tone:'active'
   },
   operators:{
     primary:'OPERATOR FILE',
-    detail:'620 OPERATORS ON FILE',
+    detail:'620 RECORDS ON FILE',
     state:'STATUS: READY',
     tone:'active'
   },
@@ -3215,8 +2185,8 @@ const ndContexts={
     tone:'active'
   },
   miladyDaily:{
-    primary:'GAMES',
-    detail:'THE MLP MINI / DAILY CROSSWORD',
+    primary:'MILADY DAILY',
+    detail:'FIVE LETTERS / SIX TRIES',
     state:'STATUS: READY',
     tone:'active'
   },
@@ -3225,6 +2195,12 @@ const ndContexts={
     detail:'OFFICIAL PUBLICATION LINKS',
     state:'STATUS: READY',
     tone:'active'
+  },
+  wire:{
+    primary:'WIRE DESK',
+    detail:'REMILIANET',
+    state:'STATUS: STANDBY',
+    tone:'standby'
   }
 };
 
@@ -3287,8 +2263,24 @@ ndSetContext('printer');
 
 
 
+/* ==================== MILADY DAILY HELP EVENTS ==================== */
+const dailyRulesBtn=document.getElementById('dailyRulesBtn');
+if(dailyRulesBtn){
+  dailyRulesBtn.addEventListener('click',()=>ndOpen('ndDailyRules'));
+}
+const ndBeginDaily=document.getElementById('ndBeginDaily');
+if(ndBeginDaily){
+  ndBeginDaily.addEventListener('click',()=>{
+    ndClose('ndDailyRules');
+    document.getElementById('miladyDaily')?.scrollIntoView({behavior:'smooth',block:'start'});
+    ndSay('Milady Daily — begin puzzle');
+  });
+}
 
 </script>
+
+<script src="/assets/milady-daily-words.js"></script>
+<script src="/assets/milady-daily.js"></script>
 
 <script>
 (function(){
@@ -3313,466 +2305,21 @@ ndSetContext('printer');
 </script>
 
 <script>
-/* ==================== CULTURAL DESK / LIVE X WIRE ==================== */
-(function(){
-  const feed=document.getElementById("culturalWireFeed");
-  const updated=document.getElementById("culturalWireUpdated");
-  const count=document.getElementById("culturalWireCount");
-  if(!feed)return;
+window.addEventListener("load", function () {
+  setTimeout(function () {
+    const game = document.getElementById("miladyDaily");
+    if (!game) return;
 
-  const esc=(value="")=>String(value).replace(/[&<>"']/g,ch=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[ch]));
+    const topOffset = 88;
+    const y = game.getBoundingClientRect().top + window.scrollY - topOffset;
 
-  const relativeTime=(iso)=>{
-    if(!iso)return "FILED";
-    const seconds=Math.max(0,Math.floor((Date.now()-new Date(iso).getTime())/1000));
-    if(seconds<60)return "NOW";
-    const minutes=Math.floor(seconds/60);
-    if(minutes<60)return `${minutes}M AGO`;
-    const hours=Math.floor(minutes/60);
-    if(hours<24)return `${hours}H AGO`;
-    const days=Math.floor(hours/24);
-    return `${days}D AGO`;
-  };
-
-  const dispatchHTML=(item,index)=>{
-    const author=item.author||{};
-    const metrics=item.metrics||{};
-    const handle=author.username?`@${author.username}`:"UNKNOWN";
-    const label=item.primary
-      ? `${esc(item.category||"PRIMARY")} / PRIMARY WIRE`
-      : "COMMUNITY DISPATCH";
-
-    const metricParts=[];
-    if(metrics.likes)metricParts.push(`♥ ${Number(metrics.likes).toLocaleString()}`);
-    if(metrics.reposts)metricParts.push(`RP ${Number(metrics.reposts).toLocaleString()}`);
-    if(metrics.replies)metricParts.push(`RE ${Number(metrics.replies).toLocaleString()}`);
-    if(metrics.quotes)metricParts.push(`QT ${Number(metrics.quotes).toLocaleString()}`);
-
-    return `<article class="cultural-dispatch">
-      <div class="dispatch-file">
-        <div class="${item.primary?"primary-wire":""}">${label}</div>
-        <div>${relativeTime(item.created_at)}</div>
-        <div>FILE ${String(index+1).padStart(2,"0")}</div>
-      </div>
-      <div class="dispatch-body">
-        <div class="dispatch-author">${esc(handle)}</div>
-        <p class="dispatch-text">${esc(item.text||"")}</p>
-        ${metricParts.length?`<div class="dispatch-metrics">${metricParts.join(" / ")}</div>`:""}
-      </div>
-      <div class="dispatch-source">
-        <a href="${esc(item.source_url||"#")}" target="_blank" rel="noopener noreferrer">Read transmission →</a>
-      </div>
-    </article>`;
-  };
-
-  async function loadCulturalWire(){
-    try{
-      const response=await fetch("/api/cultural-wire",{
-        headers:{"accept":"application/json"}
-      });
-      const data=await response.json().catch(()=>({}));
-
-      if(!response.ok||!data.ok){
-        throw new Error(data.error||`HTTP ${response.status}`);
-      }
-
-      const items=Array.isArray(data.items)?data.items:[];
-
-      feed.innerHTML=items.length
-        ? items.map(dispatchHTML).join("")
-        : '<div class="cultural-wire-empty mono">NO DISPATCHES CLEARED FOR PRINT.</div>';
-
-      count.textContent=items.length
-        ? `${items.length} DISPATCH${items.length===1?"":"ES"} ON DESK`
-        : "WIRE CLEAR";
-
-      if(data.fetched_at){
-        const d=new Date(data.fetched_at);
-        updated.textContent=`WIRE UPDATED ${d.toLocaleTimeString([],{
-          hour:"2-digit",minute:"2-digit"
-        }).toUpperCase()}`;
-      }else{
-        updated.textContent="WIRE RECEIVED";
-      }
-    }catch(err){
-      console.error("Cultural Wire load failed:",err);
-      feed.innerHTML='<div class="cultural-wire-empty mono">CULTURAL WIRE TEMPORARILY UNAVAILABLE.</div>';
-      updated.textContent="WIRE OFFLINE";
-      count.textContent="LOCAL DESK ACTIVE";
-    }
-  }
-
-  loadCulturalWire();
-})();
-</script>
-
-
-<script>
-/* ==================== DAILY HOUSE NOTE ==================== */
-(function(){
-  const HOUSE_NOTES = [
-    {text:"We don't have to try. We're the new art.",type:"MANIFESTO",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"And so we self-organized into Remilia.",type:"ORIGIN",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"Remilia is an institution.",type:"MANIFESTO",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"Remilia is a self-organization.",type:"MANIFESTO",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"Remilia is a lifestyle brand.",type:"MANIFESTO",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"Remilia is an artist's colony.",type:"MANIFESTO",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"Remilia is a community center for the digital village.",type:"NETWORK",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"Remilia is a manifesto.",type:"MANIFESTO",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"Remilia will save the internet.",type:"NETWORK",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"We're God's little warriors.",type:"MANIFESTO",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"We're network kommandos.",type:"NETWORK",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"},
-    {text:"Nothing we can do can be cringe, except when it is and then we don't care, we don't care.",type:"INTERNET CULTURE",source:"REMILIA",year:"2021",sourceUrl:"https://wiki.remilia.org/I_Long_For_Network_Spirituality"}
-  ];
-
-  const q=document.getElementById("houseNoteQuote");
-  const s=document.getElementById("houseNoteSource");
-  const l=document.getElementById("houseNoteLink");
-  const n=document.getElementById("houseNoteNumber");
-  const d=document.getElementById("houseNoteDate");
-  if(!q)return;
-
-  const now=new Date();
-  const start=new Date(now.getFullYear(),0,0);
-  const day=Math.floor((now-start)/86400000);
-  const note=HOUSE_NOTES[(day-1)%HOUSE_NOTES.length];
-
-  q.textContent=`“${note.text}”`;
-  s.textContent=`${note.source} / ${note.type} / ${note.year}`;
-  l.href=note.sourceUrl;
-  n.textContent=`HOUSE NOTE / ${String(day).padStart(3,"0")}`;
-  d.textContent=now.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}).toUpperCase();
-})();
-</script>
-
-
-<div class="nd-dialog" id="ndMiniHow" aria-hidden="true">
-  <div class="nd-window" role="dialog" aria-modal="true" aria-labelledby="ndMiniHowTitle">
-    <div class="nd-dialog-title">
-      <span id="ndMiniHowTitle">The MLP Mini — How to Play</span>
-      <button class="nd-control" type="button" id="miniHowCloseTop">×</button>
-    </div>
-    <div class="nd-dialog-body mini-how-body">
-      <p><b>Fill the 5 × 5 grid using the Across and Down clues.</b> Every answer shares letters with another answer.</p>
-
-      <div class="mini-how-rules">
-        <div><b>SELECT</b><span>Tap a square to begin.</span></div>
-        <div><b>SWITCH</b><span>Tap the selected square again to change between Across and Down.</span></div>
-        <div><b>TYPE</b><span>Enter letters with the keyboard. Arrow keys move through the grid.</span></div>
-        <div><b>CHECK</b><span>Flags incorrect letters without revealing the answer.</span></div>
-        <div><b>CLEAR</b><span>Restarts the current puzzle.</span></div>
-        <div><b>FINISH</b><span>Complete the grid to stop the clock and unlock Copy Result.</span></div>
-      </div>
-
-      <p class="mini-how-note mono">YOUR PROGRESS IS SAVED AUTOMATICALLY ON THIS DEVICE.</p>
-
-      <div class="nd-actions">
-        <button class="nd-dialog-btn" type="button" id="miniHowClose">OK</button>
-      </div>
-    </div>
-  </div>
-
-<script>
-/* ============================================================
-   THE MLP MINI — CROSSWORD ENGINE
-   No API. No external game script. Local progress only.
-   ============================================================ */
-(function(){
-  const PUZZLES = [{
-    id: 1,
-    grid: ["HEART","EMBER","ABUSE","RESIN","TREND"],
-    across: [
-      [1,"Symbol of affection."],
-      [6,"A glowing piece left in the fire."],
-      [7,"Misuse; treat badly."],
-      [8,"Sticky substance from certain trees."],
-      [9,"A direction culture seems to be moving."]
-    ],
-    down: [
-      [1,"What a white one can mean on the timeline."],
-      [2,"Small glow that can start something larger."],
-      [3,"Use something wrongly."],
-      [4,"Material that can preserve an impression."],
-      [5,"A pattern gaining momentum."]
-    ]
-  }];
-
-  const gridEl = document.getElementById("miniGrid");
-  if(!gridEl) return;
-
-  const puzzle = PUZZLES[0];
-  const size = 5;
-  const solution = puzzle.grid.join("");
-  const storageKey = "mlp-mini-" + puzzle.id;
-  const numberEl = document.getElementById("miniPuzzleNo");
-  const timerEl = document.getElementById("miniTimer");
-  const messageEl = document.getElementById("miniMessage");
-  const acrossEl = document.getElementById("miniAcross");
-  const downEl = document.getElementById("miniDown");
-  const checkBtn = document.getElementById("miniCheckBtn");
-  const clearBtn = document.getElementById("miniClearBtn");
-  const shareBtn = document.getElementById("miniShareBtn");
-
-  if(numberEl) numberEl.textContent = "PUZZLE " + String(puzzle.id).padStart(3,"0");
-
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(storageKey) || "{}"); } catch(e) {}
-  let values = Array.isArray(saved.values) && saved.values.length===25 ? saved.values : Array(25).fill("");
-  let selected = Number.isInteger(saved.selected) ? saved.selected : 0;
-  let direction = saved.direction === "down" ? "down" : "across";
-  let startedAt = saved.startedAt || null;
-  let elapsedBefore = saved.elapsed || 0;
-  let completed = !!saved.completed;
-  let completedSeconds = saved.completedSeconds || 0;
-  let timerHandle = null;
-
-  const starts = {};
-  for(let c=0;c<size;c++) starts[c] = c+1;
-  for(let r=1;r<size;r++) starts[r*size] = r+5;
-
-  function secondsNow(){
-    if(completed) return completedSeconds;
-    if(!startedAt) return elapsedBefore;
-    return elapsedBefore + Math.floor((Date.now()-startedAt)/1000);
-  }
-  function formatTime(sec){
-    const m=Math.floor(sec/60), s=sec%60;
-    return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
-  }
-  function startTimer(){
-    if(completed || startedAt) return;
-    startedAt=Date.now();
-    save();
-    timerHandle=setInterval(renderTimer,1000);
-  }
-  function renderTimer(){
-    if(timerEl) timerEl.textContent=formatTime(secondsNow());
-  }
-  function stopTimer(){
-    if(timerHandle) clearInterval(timerHandle);
-    timerHandle=null;
-  }
-  function save(){
-    localStorage.setItem(storageKey, JSON.stringify({
-      values, selected, direction, startedAt, elapsed:elapsedBefore,
-      completed, completedSeconds
-    }));
-  }
-
-  function indexFor(r,c){ return r*size+c; }
-  function rowOf(i){ return Math.floor(i/size); }
-  function colOf(i){ return i%size; }
-
-  function wordIndices(i,dir){
-    const r=rowOf(i), c=colOf(i), out=[];
-    if(dir==="across") for(let x=0;x<size;x++) out.push(indexFor(r,x));
-    else for(let y=0;y<size;y++) out.push(indexFor(y,c));
-    return out;
-  }
-
-  function clueNumberFor(i,dir){
-    return dir==="across" ? (rowOf(i)===0 ? 1 : rowOf(i)+5) : colOf(i)+1;
-  }
-
-  function renderGrid(){
-    gridEl.innerHTML="";
-    const activeWord = new Set(wordIndices(selected,direction));
-    for(let i=0;i<25;i++){
-      const b=document.createElement("button");
-      b.type="button";
-      b.className="mini-cell";
-      b.dataset.i=i;
-      b.setAttribute("role","gridcell");
-      b.setAttribute("aria-label","Row "+(rowOf(i)+1)+", column "+(colOf(i)+1)+(values[i]?", "+values[i]:""));
-      if(activeWord.has(i)) b.classList.add("in-word");
-      if(i===selected) b.classList.add("selected");
-      if(starts[i]){
-        const n=document.createElement("span");
-        n.className="num";
-        n.textContent=starts[i];
-        b.appendChild(n);
-      }
-      const letter=document.createElement("span");
-      letter.textContent=values[i] || "";
-      b.appendChild(letter);
-      b.addEventListener("click",()=>{
-        if(selected===i) direction=direction==="across"?"down":"across";
-        selected=i;
-        save(); renderAll();
-      });
-      gridEl.appendChild(b);
-    }
-  }
-
-  function renderClues(){
-    function fill(el,list,dir){
-      el.innerHTML="";
-      list.forEach(([num,text])=>{
-        const li=document.createElement("li");
-        if(clueNumberFor(selected,dir)===num && direction===dir) li.classList.add("active");
-        li.innerHTML='<span class="clue-num">'+num+'</span><span>'+text+'</span>';
-        li.addEventListener("click",()=>{
-          direction=dir;
-          if(dir==="across"){
-            const r = num===1 ? 0 : num-5;
-            selected=indexFor(r,0);
-          }else{
-            selected=indexFor(0,num-1);
-          }
-          save(); renderAll();
-        });
-        el.appendChild(li);
-      });
-    }
-    fill(acrossEl,puzzle.across,"across");
-    fill(downEl,puzzle.down,"down");
-  }
-
-  function renderAll(){
-    renderGrid();
-    renderClues();
-    renderTimer();
-    if(completed){
-      messageEl.textContent="PUZZLE COMPLETE / "+formatTime(completedSeconds);
-      shareBtn.disabled=false;
-    }
-  }
-
-  function move(delta){
-    let r=rowOf(selected), c=colOf(selected);
-    if(direction==="across") c=Math.max(0,Math.min(size-1,c+delta));
-    else r=Math.max(0,Math.min(size-1,r+delta));
-    selected=indexFor(r,c);
-  }
-
-  function enterLetter(ch){
-    if(completed) return;
-    startTimer();
-    values[selected]=ch.toUpperCase();
-    move(1);
-    messageEl.textContent="FILE IN PROGRESS.";
-    save(); renderAll();
-    if(values.every(Boolean)) check(false);
-  }
-
-  function backspace(){
-    if(completed) return;
-    startTimer();
-    if(values[selected]) values[selected]="";
-    else { move(-1); values[selected]=""; }
-    save(); renderAll();
-  }
-
-  function check(manual=true){
-    const cells=[...gridEl.querySelectorAll(".mini-cell")];
-    let wrong=0, empty=0;
-    values.forEach((v,i)=>{
-      cells[i]?.classList.remove("bad");
-      if(!v) empty++;
-      else if(v!==solution[i]){
-        wrong++;
-        if(manual) cells[i]?.classList.add("bad");
-      }
+    window.scrollTo({
+      top: Math.max(0, y),
+      behavior: "auto"
     });
-    if(empty){
-      if(manual) messageEl.textContent=empty+" SQUARE"+(empty===1?"":"S")+" STILL OPEN.";
-      return;
-    }
-    if(wrong){
-      if(manual) messageEl.textContent=wrong+" LETTER"+(wrong===1?"":"S")+" NEED"+(wrong===1?"S":"")+" ANOTHER LOOK.";
-      return;
-    }
-    completed=true;
-    completedSeconds=secondsNow();
-    if(startedAt){
-      elapsedBefore=completedSeconds;
-      startedAt=null;
-    }
-    stopTimer();
-    shareBtn.disabled=false;
-    messageEl.textContent="PUZZLE COMPLETE / "+formatTime(completedSeconds);
-    save(); renderAll();
-  }
-
-  document.addEventListener("keydown",(e)=>{
-    const tag=(document.activeElement?.tagName||"").toLowerCase();
-    if(["input","textarea","select"].includes(tag)) return;
-    if(!document.getElementById("games")) return;
-    if(/^[a-zA-Z]$/.test(e.key)){ e.preventDefault(); enterLetter(e.key); }
-    else if(e.key==="Backspace"||e.key==="Delete"){ e.preventDefault(); backspace(); }
-    else if(e.key==="ArrowLeft"){ e.preventDefault(); direction="across"; selected=Math.max(0,selected-1); save(); renderAll(); }
-    else if(e.key==="ArrowRight"){ e.preventDefault(); direction="across"; selected=Math.min(24,selected+1); save(); renderAll(); }
-    else if(e.key==="ArrowUp"){ e.preventDefault(); direction="down"; selected=Math.max(0,selected-5); save(); renderAll(); }
-    else if(e.key==="ArrowDown"){ e.preventDefault(); direction="down"; selected=Math.min(24,selected+5); save(); renderAll(); }
-    else if(e.key===" "){ e.preventDefault(); direction=direction==="across"?"down":"across"; save(); renderAll(); }
-  });
-
-  checkBtn?.addEventListener("click",()=>check(true));
-  clearBtn?.addEventListener("click",()=>{
-    if(!confirm("Clear this puzzle and restart?")) return;
-    values=Array(25).fill("");
-    selected=0; direction="across"; startedAt=null; elapsedBefore=0;
-    completed=false; completedSeconds=0; stopTimer();
-    localStorage.removeItem(storageKey);
-    messageEl.textContent="SELECT A SQUARE TO BEGIN.";
-    renderAll();
-  });
-  shareBtn?.addEventListener("click",async()=>{
-    if(!completed) return;
-    const result="THE MLP MINI #"+String(puzzle.id).padStart(3,"0")+
-      "\n"+formatTime(completedSeconds)+" / COMPLETE"+
-      "\n\n■■■■■\n■■■■■\n■■■■■\n■■■■■\n■■■■■"+
-      "\n\nMILADYLINEPRINTER.XYZ";
-    try{
-      await navigator.clipboard.writeText(result);
-      messageEl.textContent="RESULT COPIED.";
-    }catch(e){
-      messageEl.textContent="COPY UNAVAILABLE ON THIS DEVICE.";
-    }
-  });
-
-  const howDialog=document.getElementById("ndMiniHow");
-  const howBtn=document.getElementById("miniHowBtn");
-  const howClose=document.getElementById("miniHowClose");
-  const howCloseTop=document.getElementById("miniHowCloseTop");
-  const howSeenKey="mlp-mini-how-seen";
-
-  function openHow(){
-    if(!howDialog) return;
-    howDialog.classList.add("open");
-    howDialog.setAttribute("aria-hidden","false");
-  }
-  function closeHow(){
-    if(!howDialog) return;
-    howDialog.classList.remove("open");
-    howDialog.setAttribute("aria-hidden","true");
-    try{ localStorage.setItem(howSeenKey,"1"); }catch(e){}
-  }
-
-  howBtn?.addEventListener("click",openHow);
-  howClose?.addEventListener("click",closeHow);
-  howCloseTop?.addEventListener("click",closeHow);
-  howDialog?.addEventListener("click",(e)=>{
-    if(e.target===howDialog) closeHow();
-  });
-  document.addEventListener("keydown",(e)=>{
-    if(e.key==="Escape" && howDialog?.classList.contains("open")) closeHow();
-  });
-
-  if(!completed && startedAt) timerHandle=setInterval(renderTimer,1000);
-  renderAll();
-
-  // Open instructions automatically only on the first visit to The MLP Mini.
-  try{
-    if(!localStorage.getItem(howSeenKey)){
-      setTimeout(openHow,250);
-    }
-  }catch(e){}
-})();
+  }, 120);
+});
 </script>
-</div>
 
 </body>
 </html>

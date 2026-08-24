@@ -1,0 +1,103 @@
+name: Build MLP Operator Archive
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Restore previous operator archive
+        id: restore-archive
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/operators.json
+            data/operator-build-failures.json
+            operators/full
+            operators/thumbs
+          key: mlp-operator-archive-${{ github.run_id }}
+          restore-keys: |
+            mlp-operator-archive-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build operator archive
+        env:
+          MLP_ARCHIVE_CONCURRENCY: 2
+          MLP_ARCHIVE_TIMEOUT_MS: 20000
+          MLP_ARCHIVE_RETRIES: 5
+          MLP_ARCHIVE_ALLOW_PARTIAL: 1
+        run: npm run build:operators
+
+      - name: Verify archive
+        id: verify
+        continue-on-error: true
+        run: npm run verify:operators
+
+      - name: Save progress for next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/operators.json
+            data/operator-build-failures.json
+            operators/full
+            operators/thumbs
+          key: mlp-operator-archive-${{ github.run_id }}
+
+      - name: Prepare downloadable archive
+        if: always()
+        run: |
+          mkdir -p artifact
+
+          if [ -f data/operators.json ]; then
+            cp data/operators.json artifact/operators.json
+          fi
+
+          if [ -f data/operator-build-failures.json ]; then
+            cp data/operator-build-failures.json artifact/operator-build-failures.json
+          fi
+
+          if [ -d operators ]; then
+            cp -R operators artifact/operators
+          fi
+
+      - name: Upload current operator archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlp-operator-archive-run-${{ github.run_number }}
+          path: artifact
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Archive status
+        if: always()
+        run: |
+          echo "================================================"
+
+          if [ "${{ steps.verify.outcome }}" = "success" ]; then
+            echo "ARCHIVE VERIFIED — 620 / 620 COMPLETE"
+          else
+            echo "PARTIAL ARCHIVE SAVED"
+            echo "Run this workflow again."
+            echo "The next run will restore previous progress and fetch only missing operators."
+          fi
+
+          echo "================================================"

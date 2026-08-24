@@ -1,4 +1,187 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MLP Operator Desk</title><style>
-:root{--paper:#e5ded1;--paper2:#f4efe6;--ink:#292520;--soft:#91887d;--red:#8a3328}*{box-sizing:border-box}body{margin:0;background:#cfc6b8;color:var(--ink);font-family:Georgia,"Times New Roman",serif}main{width:min(1000px,calc(100% - 24px));margin:18px auto;background:var(--paper);padding:18px}h1{font-size:54px;line-height:.9;font-weight:500;margin:8px 0 20px}.mono,button,input,.meta{font-family:"Courier New",monospace}.top{display:flex;justify-content:space-between;gap:12px;align-items:end;border-bottom:2px solid var(--ink);padding-bottom:12px}.auth{display:flex;gap:8px}input,button{border:1px solid var(--ink);background:var(--paper2);padding:10px;border-radius:0}button{font-size:9px;text-transform:uppercase;cursor:pointer}.dark{background:var(--ink);color:var(--paper2)}.notice{padding:12px 0;font:10px/1.4 "Courier New",monospace;text-transform:uppercase;color:var(--soft)}.item{padding:18px 0;border-top:1px solid var(--ink);display:grid;grid-template-columns:1fr auto;gap:18px}.item h2{font-size:28px;font-weight:500;margin:3px 0 7px}.item p{margin:0 0 9px;max-width:700px}.meta{font-size:9px;text-transform:uppercase;color:var(--soft)}.actions{display:flex;flex-direction:column;gap:7px;min-width:110px}.pending{color:var(--red)}@media(max-width:650px){.top,.item{display:grid;grid-template-columns:1fr}.auth{display:grid}.actions{flex-direction:row;flex-wrap:wrap}h1{font-size:44px}}
-</style></head><body><main><div class="top"><div><div class="mono" style="font-size:10px;text-transform:uppercase">Milady Line Printer / private</div><h1>Operator desk</h1></div><div class="auth"><input id="key" type="password" placeholder="Admin key"><button id="load" class="dark">Load queue</button></div></div><div id="status" class="notice">Admin key is stored only in this browser session.</div><div id="list"></div></main>
-<script>const e=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));key.value=sessionStorage.getItem('mlp-admin-key')||'';async function loadQ(){const k=key.value.trim();if(!k)return;sessionStorage.setItem('mlp-admin-key',k);const r=await fetch('/api/admin-classifieds',{headers:{authorization:`Bearer ${k}`}}),d=await r.json().catch(()=>({}));if(!r.ok){status.textContent=d.error||'Could not load queue';return}status.textContent=`${d.items.length} records loaded`;list.innerHTML=d.items.map(x=>`<article class="item"><div><div class="meta ${x.status==='pending'?'pending':''}">${e(x.category)} / ${e(x.status)} / ${new Date(x.created_at).toLocaleString()}</div><h2>${e(x.headline)}</h2><p>${e(x.body)}</p><div class="meta">${x.handle?e(x.handle)+' / ':''}expires ${new Date(x.expires_at).toLocaleDateString()} ${x.featured?' / FEATURED':''}</div></div><div class="actions"><button data-id="${x.id}" data-action="approve" class="dark">Approve</button><button data-id="${x.id}" data-action="reject">Reject</button><button data-id="${x.id}" data-action="${x.featured?'unfeature':'feature'}">${x.featured?'Unfeature':'Feature'}</button><button data-id="${x.id}" data-action="delete">Delete</button></div></article>`).join('')}async function act(id,action){const k=key.value.trim();if(action==='delete'&&!confirm('Delete permanently?'))return;const r=await fetch('/api/admin-classifieds',{method:'PATCH',headers:{'content-type':'application/json',authorization:`Bearer ${k}`},body:JSON.stringify({id,action})}),d=await r.json().catch(()=>({}));if(!r.ok){alert(d.error||'Action failed');return}loadQ()}load.onclick=loadQ;list.addEventListener('click',ev=>{const b=ev.target.closest('[data-action]');if(b)act(b.dataset.id,b.dataset.action)});</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MLP Classified Desk — Admin</title>
+<style>
+:root{--face:#c0c0c0;--hi:#fff;--lo:#808080;--dark:#000;--blue:#000080;--paper:#f4efe6;--ink:#111;--red:#8a3328}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#3b7773;color:var(--ink);font-family:"MS Sans Serif",Arial,sans-serif}
+.window{width:min(1000px,100%);margin:auto;background:var(--face);border-top:2px solid var(--hi);border-left:2px solid var(--hi);border-right:2px solid var(--dark);border-bottom:2px solid var(--dark);box-shadow:7px 8px 0 rgba(0,0,0,.22)}
+.title{margin:2px;padding:5px 7px;background:var(--blue);color:#fff;font:bold 12px Arial,sans-serif;display:flex;justify-content:space-between}
+.body{padding:14px}
+.top{display:flex;justify-content:space-between;gap:14px;align-items:end;border-bottom:1px solid #555;padding-bottom:12px}
+h1{font:700 30px/1 "Times New Roman",Times,serif;margin:4px 0}
+.mono,.meta,.notice,button,input{font-family:"Courier New",monospace}
+.auth{display:flex;gap:7px;align-items:center}
+input,button{border-radius:0}
+input{min-width:260px;padding:8px;background:#fff;border-top:2px solid var(--lo);border-left:2px solid var(--lo);border-right:2px solid var(--hi);border-bottom:2px solid var(--hi)}
+button{padding:8px 11px;background:var(--face);border-top:2px solid var(--hi);border-left:2px solid var(--hi);border-right:2px solid var(--lo);border-bottom:2px solid var(--lo);cursor:pointer;font-size:10px;text-transform:uppercase}
+button:active{border-top-color:var(--lo);border-left-color:var(--lo);border-right-color:var(--hi);border-bottom-color:var(--hi);transform:translate(1px,1px)}
+.dark{background:#222;color:#fff}
+.notice{padding:12px 2px;font-size:10px;text-transform:uppercase;color:#555}
+.notice.error{color:#a00000;font-weight:bold}
+.notice.ok{color:#1b5e20;font-weight:bold}
+.item{padding:15px 2px;border-top:1px solid #555;display:grid;grid-template-columns:1fr auto;gap:18px}
+.item h2{font:700 26px/1.05 "Times New Roman",Times,serif;margin:4px 0 8px}
+.item p{font:15px/1.3 "Times New Roman",Times,serif;margin:0 0 8px;max-width:700px}
+.meta{font-size:9px;text-transform:uppercase;color:#666}
+.pending{color:var(--red);font-weight:bold}
+.actions{display:flex;flex-direction:column;gap:6px;min-width:105px}
+@media(max-width:650px){body{padding:0}.window{width:100%;border-left:0;border-right:0}.top,.item{grid-template-columns:1fr;display:grid}.auth{display:grid}.auth input{min-width:0;width:100%}.actions{flex-direction:row;flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="title"><span>MLP NEWS DESK 95 — CLASSIFIED ADVERTISING / ADMIN</span><span>PRIVATE</span></div>
+  <div class="body">
+    <div class="top">
+      <div>
+        <div class="mono" style="font-size:10px;text-transform:uppercase">Milady Line Printer / private moderation</div>
+        <h1>Classified Desk</h1>
+      </div>
+      <div class="auth">
+        <input id="adminKey" type="password" placeholder="Admin key" autocomplete="current-password" aria-label="Classifieds admin key">
+        <button id="loadQueueBtn" class="dark" type="button">Load queue</button>
+      </div>
+    </div>
+    <div id="adminStatus" class="notice" aria-live="polite">Enter the admin key, then load the moderation queue.</div>
+    <div id="queueList"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const keyInput = document.getElementById('adminKey');
+  const loadBtn = document.getElementById('loadQueueBtn');
+  const statusEl = document.getElementById('adminStatus');
+  const listEl = document.getElementById('queueList');
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (m) => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[m]));
+
+  keyInput.value = sessionStorage.getItem('mlp-admin-key') || '';
+
+  function setStatus(message, kind='') {
+    statusEl.className = `notice ${kind}`.trim();
+    statusEl.textContent = message;
+  }
+
+  async function loadQueue() {
+    const key = keyInput.value.trim();
+
+    if (!key) {
+      setStatus('Enter the admin key first.', 'error');
+      keyInput.focus();
+      return;
+    }
+
+    sessionStorage.setItem('mlp-admin-key', key);
+    loadBtn.disabled = true;
+    setStatus('Loading moderation queue...');
+
+    try {
+      const response = await fetch('/api/admin-classifieds', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Accept': 'application/json'
+        },
+        cache: 'no-store'
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || `Admin API returned HTTP ${response.status}`);
+      }
+
+      const items = Array.isArray(data.items) ? data.items : [];
+      setStatus(
+        items.length ? `${items.length} record${items.length === 1 ? '' : 's'} loaded.` : 'Queue clear. No classified submissions are waiting.',
+        'ok'
+      );
+
+      listEl.innerHTML = items.map((x) => `
+        <article class="item">
+          <div>
+            <div class="meta ${x.status === 'pending' ? 'pending' : ''}">
+              ${esc(x.category)} / ${esc(x.status)} / ${x.created_at ? new Date(x.created_at).toLocaleString() : ''}
+            </div>
+            <h2>${esc(x.headline)}</h2>
+            <p>${esc(x.body)}</p>
+            <div class="meta">
+              ${x.handle ? esc(x.handle) + ' / ' : ''}
+              ${x.expires_at ? 'expires ' + new Date(x.expires_at).toLocaleDateString() : ''}
+              ${x.featured ? ' / FEATURED' : ''}
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" data-id="${esc(x.id)}" data-action="approve" class="dark">Approve</button>
+            <button type="button" data-id="${esc(x.id)}" data-action="reject">Reject</button>
+            <button type="button" data-id="${esc(x.id)}" data-action="${x.featured ? 'unfeature' : 'feature'}">${x.featured ? 'Unfeature' : 'Feature'}</button>
+            <button type="button" data-id="${esc(x.id)}" data-action="delete">Delete</button>
+          </div>
+        </article>
+      `).join('');
+    } catch (err) {
+      console.error('Admin queue error:', err);
+      setStatus(err.message || 'Could not load queue.', 'error');
+      listEl.innerHTML = '';
+    } finally {
+      loadBtn.disabled = false;
+    }
+  }
+
+  async function act(id, action) {
+    const key = keyInput.value.trim();
+
+    if (!key) {
+      setStatus('Enter the admin key first.', 'error');
+      return;
+    }
+
+    if (action === 'delete' && !confirm('Delete this classified permanently?')) return;
+
+    setStatus(`${action.toUpperCase()} — sending...`);
+
+    try {
+      const response = await fetch('/api/admin-classifieds', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ id, action })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || `Admin API returned HTTP ${response.status}`);
+      }
+
+      await loadQueue();
+    } catch (err) {
+      console.error('Admin action error:', err);
+      setStatus(err.message || 'Admin action failed.', 'error');
+    }
+  }
+
+  loadBtn.addEventListener('click', loadQueue);
+  keyInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') loadQueue();
+  });
+
+  listEl.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-action]');
+    if (!button) return;
+    act(button.dataset.id, button.dataset.action);
+  });
+})();
+</script>
+</body>
+</html>

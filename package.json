@@ -1,0 +1,17 @@
+{
+  "name": "mlp-operator-archive-builder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static archive builder for Milady Line Printer operators",
+  "type": "module",
+  "scripts": {
+    "build:operators": "node scripts/build-operators.js",
+    "verify:operators": "node scripts/verify-operators.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "sharp": "^0.34.3"
+  }
+}
