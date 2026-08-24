@@ -53,54 +53,120 @@ const FAIL_PATH =
     "operator-build-failures.json"
   );
 
-const CONCURRENCY = Math.max(
+/*
+ * Respect workflow values where useful,
+ * but keep them within safe limits.
+ */
+const CONCURRENCY = clampInt(
+  process.env.MLP_ARCHIVE_CONCURRENCY,
+  2,
   1,
-  Number(
-    process.env
-      .MLP_ARCHIVE_CONCURRENCY || 2
-  )
+  4
 );
 
-const FETCH_TIMEOUT_MS = Math.max(
-  1500,
-  Number(
-    process.env
-      .MLP_ARCHIVE_TIMEOUT_MS || 20000
-  )
+const FETCH_TIMEOUT_MS = clampInt(
+  process.env.MLP_ARCHIVE_TIMEOUT_MS,
+  20000,
+  5000,
+  30000
 );
 
-const RETRIES = Math.max(
+/*
+ * Intentionally capped at 3.
+ *
+ * The old workflow may still pass 5,
+ * but 5 rounds × 3 gateways × long
+ * timeouts can make a handful of bad
+ * operators consume the entire job.
+ */
+const RETRY_ROUNDS = clampInt(
+  process.env.MLP_ARCHIVE_RETRIES,
+  3,
   1,
-  Number(
-    process.env
-      .MLP_ARCHIVE_RETRIES || 5
-  )
+  3
 );
 
-const BATCH_SIZE = Math.max(
+/*
+ * Smaller batches make every GitHub
+ * Action predictable and cumulative.
+ */
+const BATCH_SIZE = clampInt(
+  process.env.MLP_ARCHIVE_BATCH_SIZE,
+  50,
   1,
-  Number(
-    process.env
-      .MLP_ARCHIVE_BATCH_SIZE || 75
-  )
+  100
 );
-
-const args =
-  new Set(
-    process.argv.slice(2)
-  );
-
-const FORCE =
-  args.has("--force");
 
 const ALLOW_PARTIAL =
   process.env
     .MLP_ARCHIVE_ALLOW_PARTIAL === "1";
 
+const FORCE =
+  new Set(
+    process.argv.slice(2)
+  ).has("--force");
+
+
+/* ============================================================
+   BASIC HELPERS
+   ============================================================ */
+
+function clampInt(
+  value,
+  fallback,
+  min,
+  max
+) {
+  const parsed =
+    Number(value);
+
+  if (
+    !Number.isFinite(parsed)
+  ) {
+    return fallback;
+  }
+
+  return Math.max(
+    min,
+    Math.min(
+      max,
+      Math.floor(parsed)
+    )
+  );
+}
+
+
 function pad(id) {
   return String(id)
     .padStart(3, "0");
 }
+
+
+function sleep(ms) {
+  return new Promise(
+    (resolve) =>
+      setTimeout(
+        resolve,
+        ms
+      )
+  );
+}
+
+
+function jitter(base) {
+  return Math.floor(
+    base *
+    (
+      0.8 +
+      Math.random() * 0.4
+    )
+  );
+}
+
+
+/* ============================================================
+   ERC-721 TOKEN URI
+   ============================================================ */
 
 function tokenUriCalldata(id) {
   return (
@@ -110,6 +176,7 @@ function tokenUriCalldata(id) {
       .padStart(64, "0")
   );
 }
+
 
 function decodeAbiString(hex) {
   if (
@@ -124,27 +191,65 @@ function decodeAbiString(hex) {
   const clean =
     hex.slice(2);
 
-  const offset =
-    Number.parseInt(
-      clean.slice(0, 64),
-      16
-    ) * 2;
+  if (
+    clean.length < 128
+  ) {
+    throw new Error(
+      "Malformed ABI string response"
+    );
+  }
 
-  const length =
+  const offsetBytes =
     Number.parseInt(
       clean.slice(
-        offset,
-        offset + 64
+        0,
+        64
       ),
       16
     );
 
+  const offset =
+    offsetBytes * 2;
+
+  const lengthHex =
+    clean.slice(
+      offset,
+      offset + 64
+    );
+
+  if (!lengthHex) {
+    throw new Error(
+      "Malformed ABI string length"
+    );
+  }
+
+  const length =
+    Number.parseInt(
+      lengthHex,
+      16
+    );
+
+  const start =
+    offset + 64;
+
+  const end =
+    start +
+    length * 2;
+
   const data =
     clean.slice(
-      offset + 64,
-      offset + 64 +
-        length * 2
+      start,
+      end
     );
+
+  if (
+    data.length !==
+    length * 2
+  ) {
+    throw new Error(
+      "Truncated ABI string response"
+    );
+  }
 
   return Buffer
     .from(
@@ -154,33 +259,10 @@ function decodeAbiString(hex) {
     .toString("utf8");
 }
 
-function ipfsCandidates(uri) {
-  if (!uri) {
-    return [];
-  }
 
-  if (
-    !uri.startsWith(
-      "ipfs://"
-    )
-  ) {
-    return [uri];
-  }
-
-  const key =
-    uri
-      .slice(7)
-      .replace(
-        /^ipfs\//,
-        ""
-      );
-
-  return IPFS_GATEWAYS
-    .map(
-      (gateway) =>
-        gateway + key
-    );
-}
+/* ============================================================
+   DATA / IPFS URI HELPERS
+   ============================================================ */
 
 function decodeDataUri(uri) {
   const match =
@@ -200,32 +282,101 @@ function decodeDataUri(uri) {
   const isBase64 =
     Boolean(match[2]);
 
-  const raw =
+  const payload =
     match[3] || "";
-
-  const buffer =
-    isBase64
-      ? Buffer.from(
-          raw,
-          "base64"
-        )
-      : Buffer.from(
-          decodeURIComponent(
-            raw
-          ),
-          "utf8"
-        );
 
   return {
     mime,
-    buffer,
+
+    buffer:
+      isBase64
+        ? Buffer.from(
+            payload,
+            "base64"
+          )
+        : Buffer.from(
+            decodeURIComponent(
+              payload
+            ),
+            "utf8"
+          ),
   };
 }
+
+
+function ipfsKey(uri) {
+  if (
+    !uri?.startsWith(
+      "ipfs://"
+    )
+  ) {
+    return null;
+  }
+
+  return uri
+    .slice(7)
+    .replace(
+      /^ipfs\//,
+      ""
+    );
+}
+
+
+/*
+ * Rotate the preferred gateway by
+ * operator ID instead of hammering
+ * Pinata/IPFS.io first every time.
+ */
+function rotatedGatewayUrls(
+  uri,
+  seed = 0
+) {
+  const key =
+    ipfsKey(uri);
+
+  if (!key) {
+    return [uri];
+  }
+
+  const start =
+    Math.abs(
+      Number(seed) || 0
+    ) %
+    IPFS_GATEWAYS.length;
+
+  const ordered = [];
+
+  for (
+    let i = 0;
+    i <
+    IPFS_GATEWAYS.length;
+    i++
+  ) {
+    const gateway =
+      IPFS_GATEWAYS[
+        (
+          start + i
+        ) %
+        IPFS_GATEWAYS.length
+      ];
+
+    ordered.push(
+      gateway + key
+    );
+  }
+
+  return ordered;
+}
+
+
+/* ============================================================
+   FETCH HELPERS
+   ============================================================ */
 
 async function fetchWithTimeout(
   url,
   options = {},
-  timeout =
+  timeoutMs =
     FETCH_TIMEOUT_MS
 ) {
   const controller =
@@ -235,7 +386,7 @@ async function fetchWithTimeout(
     setTimeout(
       () =>
         controller.abort(),
-      timeout
+      timeoutMs
     );
 
   try {
@@ -243,6 +394,7 @@ async function fetchWithTimeout(
       url,
       {
         ...options,
+
         signal:
           controller.signal,
       }
@@ -252,313 +404,428 @@ async function fetchWithTimeout(
   }
 }
 
-async function retry(
-  fn,
+
+function retryAfterMs(
+  response
+) {
+  const value =
+    response.headers.get(
+      "retry-after"
+    );
+
+  if (!value) {
+    return 0;
+  }
+
+  const seconds =
+    Number(value);
+
+  if (
+    Number.isFinite(
+      seconds
+    )
+  ) {
+    return Math.min(
+      10000,
+      Math.max(
+        0,
+        seconds * 1000
+      )
+    );
+  }
+
+  const date =
+    Date.parse(value);
+
+  if (
+    Number.isFinite(date)
+  ) {
+    return Math.min(
+      10000,
+      Math.max(
+        0,
+        date -
+        Date.now()
+      )
+    );
+  }
+
+  return 0;
+}
+
+
+/*
+ * IMPORTANT:
+ *
+ * Gateways are deliberately tried
+ * SEQUENTIALLY.
+ *
+ * The earlier builder fired every
+ * public gateway simultaneously.
+ * That multiplied traffic and helped
+ * trigger 429 rate limits.
+ */
+async function fetchFromGateways(
+  uri,
+  seed,
+  handler,
   label
 ) {
+  const data =
+    decodeDataUri(uri);
+
+  if (data) {
+    return handler({
+      url:
+        uri,
+
+      data,
+
+      response:
+        null,
+    });
+  }
+
   let lastError;
 
   for (
-    let attempt = 1;
-    attempt <= RETRIES;
-    attempt++
+    let round = 0;
+    round <
+    RETRY_ROUNDS;
+    round++
   ) {
-    try {
-      return await fn(
-        attempt
+    const urls =
+      rotatedGatewayUrls(
+        uri,
+        seed + round
       );
-    } catch (error) {
-      lastError =
-        error;
 
-      if (
-        attempt <
-        RETRIES
-      ) {
-        const wait =
-          Math.min(
-            5000,
-            500 *
-              2 **
-                (attempt - 1)
+    for (
+      const url of urls
+    ) {
+      try {
+        const timeout =
+          label === "image"
+            ? Math.min(
+                FETCH_TIMEOUT_MS,
+                18000
+              )
+            : Math.min(
+                FETCH_TIMEOUT_MS,
+                12000
+              );
+
+        const response =
+          await fetchWithTimeout(
+            url,
+            {},
+            timeout
           );
 
-        await new Promise(
-          (resolve) =>
-            setTimeout(
-              resolve,
+        if (
+          response.status === 429
+        ) {
+          const wait =
+            retryAfterMs(
+              response
+            );
+
+          if (wait) {
+            await sleep(
               wait
-            )
-        );
+            );
+          }
+
+          throw new Error(
+            `${url} -> HTTP 429`
+          );
+        }
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            `${url} -> HTTP ${response.status}`
+          );
+        }
+
+        return await handler({
+          url,
+
+          data:
+            null,
+
+          response,
+        });
+      } catch (error) {
+        lastError =
+          error;
       }
+    }
+
+    if (
+      round <
+      RETRY_ROUNDS - 1
+    ) {
+      await sleep(
+        jitter(
+          800 *
+          2 ** round
+        )
+      );
     }
   }
 
   throw new Error(
-    `${label}: ${
+    `${label} unavailable: ${
       lastError?.message ||
       lastError
     }`
   );
 }
 
-async function firstSuccessful(
-  functions,
-  label
-) {
-  const settled =
-    await Promise.allSettled(
-      functions.map(
-        (fn) => fn()
-      )
-    );
+
+/* ============================================================
+   ETHEREUM RPC
+   ============================================================ */
+
+async function rpcTokenUri(id) {
+  let lastError;
 
   for (
-    const result of settled
+    let round = 0;
+    round <
+    RETRY_ROUNDS;
+    round++
   ) {
-    if (
-      result.status ===
-      "fulfilled"
+    const start =
+      (
+        id + round
+      ) %
+      RPCS.length;
+
+    for (
+      let i = 0;
+      i <
+      RPCS.length;
+      i++
     ) {
-      return result.value;
+      const url =
+        RPCS[
+          (
+            start + i
+          ) %
+          RPCS.length
+        ];
+
+      try {
+        const response =
+          await fetchWithTimeout(
+            url,
+            {
+              method:
+                "POST",
+
+              headers: {
+                "content-type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  jsonrpc:
+                    "2.0",
+
+                  id,
+
+                  method:
+                    "eth_call",
+
+                  params: [
+                    {
+                      to:
+                        CONTRACT,
+
+                      data:
+                        tokenUriCalldata(
+                          id
+                        ),
+                    },
+
+                    "latest",
+                  ],
+                }),
+            },
+
+            Math.min(
+              FETCH_TIMEOUT_MS,
+              10000
+            )
+          );
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            `${url} -> HTTP ${response.status}`
+          );
+        }
+
+        const json =
+          await response
+            .json();
+
+        if (
+          json.error
+        ) {
+          throw new Error(
+            json.error
+              .message ||
+            "RPC error"
+          );
+        }
+
+        if (
+          !json.result
+        ) {
+          throw new Error(
+            "RPC returned no result"
+          );
+        }
+
+        return decodeAbiString(
+          json.result
+        );
+      } catch (error) {
+        lastError =
+          error;
+      }
+    }
+
+    if (
+      round <
+      RETRY_ROUNDS - 1
+    ) {
+      await sleep(
+        jitter(
+          600 *
+          2 ** round
+        )
+      );
     }
   }
 
-  const detail =
-    settled
-      .filter(
-        (result) =>
-          result.status ===
-          "rejected"
-      )
-      .map(
-        (result) =>
-          result.reason
-            ?.message ||
-          String(
-            result.reason
-          )
-      )
-      .join(" | ");
-
   throw new Error(
-    `${label} unavailable${
-      detail
-        ? `: ${detail}`
-        : ""
+    `tokenURI(${id}) unavailable: ${
+      lastError?.message ||
+      lastError
     }`
   );
 }
 
-async function rpcTokenUri(
-  id
-) {
-  const body =
-    JSON.stringify({
-      jsonrpc:
-        "2.0",
-      id,
-      method:
-        "eth_call",
-      params: [
-        {
-          to:
-            CONTRACT,
-          data:
-            tokenUriCalldata(
-              id
-            ),
-        },
-        "latest",
-      ],
-    });
 
-  const result =
-    await retry(
-      () =>
-        firstSuccessful(
-          RPCS.map(
-            (url) =>
-              async () => {
-                const response =
-                  await fetchWithTimeout(
-                    url,
-                    {
-                      method:
-                        "POST",
-                      headers:
-                        {
-                          "content-type":
-                            "application/json",
-                        },
-                      body,
-                    },
-                    Math.min(
-                      FETCH_TIMEOUT_MS,
-                      10000
-                    )
-                  );
-
-                if (
-                  !response.ok
-                ) {
-                  throw new Error(
-                    `${url} -> HTTP ${response.status}`
-                  );
-                }
-
-                const json =
-                  await response
-                    .json();
-
-                if (
-                  json.error
-                ) {
-                  throw new Error(
-                    json.error
-                      .message ||
-                    "RPC error"
-                  );
-                }
-
-                if (
-                  !json.result
-                ) {
-                  throw new Error(
-                    "RPC returned no result"
-                  );
-                }
-
-                return json
-                  .result;
-              }
-          ),
-          `RPC tokenURI(${id})`
-        ),
-      `tokenURI(${id})`
-    );
-
-  return decodeAbiString(
-    result
-  );
-}
+/* ============================================================
+   METADATA
+   ============================================================ */
 
 async function fetchJsonUri(
-  uri
+  uri,
+  id
 ) {
-  const data =
-    decodeDataUri(uri);
+  return fetchFromGateways(
+    uri,
 
-  if (data) {
-    return JSON.parse(
-      data.buffer
-        .toString(
-          "utf8"
-        )
-    );
-  }
+    id,
 
-  return retry(
-    () =>
-      firstSuccessful(
-        ipfsCandidates(
-          uri
-        ).map(
-          (url) =>
-            async () => {
-              const response =
-                await fetchWithTimeout(
-                  url,
-                  {
-                    headers:
-                      {
-                        accept:
-                          "application/json",
-                      },
-                  }
-                );
+    async ({
+      data,
+      response,
+    }) => {
+      const text =
+        data
+          ? data.buffer
+              .toString(
+                "utf8"
+              )
+          : await response
+              .text();
 
-              if (
-                !response.ok
-              ) {
-                throw new Error(
-                  `${url} -> HTTP ${response.status}`
-                );
-              }
+      try {
+        return JSON.parse(
+          text
+        );
+      } catch {
+        throw new Error(
+          "Metadata response was not valid JSON"
+        );
+      }
+    },
 
-              return response
-                .json();
-            }
-        ),
-        "metadata gateway"
-      ),
     "metadata"
   );
 }
 
+
+/* ============================================================
+   IMAGE FETCHING
+   ============================================================ */
+
 async function fetchBinaryUri(
-  uri
+  uri,
+  id
 ) {
-  const data =
-    decodeDataUri(uri);
+  return fetchFromGateways(
+    uri,
 
-  if (data) {
-    return {
-      buffer:
-        data.buffer,
-      sourceUrl:
-        uri,
-      mime:
-        data.mime,
-    };
-  }
+    id + 17,
 
-  return retry(
-    () =>
-      firstSuccessful(
-        ipfsCandidates(
-          uri
-        ).map(
-          (url) =>
-            async () => {
-              const response =
-                await fetchWithTimeout(
-                  url
-                );
+    async ({
+      url,
+      data,
+      response,
+    }) => {
+      if (data) {
+        return {
+          buffer:
+            data.buffer,
 
-              if (
-                !response.ok
-              ) {
-                throw new Error(
-                  `${url} -> HTTP ${response.status}`
-                );
-              }
+          mime:
+            data.mime,
 
-              const arrayBuffer =
-                await response
-                  .arrayBuffer();
+          sourceUrl:
+            url,
+        };
+      }
 
-              return {
-                buffer:
-                  Buffer.from(
-                    arrayBuffer
-                  ),
-                sourceUrl:
-                  url,
-                mime:
-                  response
-                    .headers
-                    .get(
-                      "content-type"
-                    ) || "",
-              };
-            }
-        ),
-        "image gateway"
-      ),
+      const arrayBuffer =
+        await response
+          .arrayBuffer();
+
+      return {
+        buffer:
+          Buffer.from(
+            arrayBuffer
+          ),
+
+        mime:
+          response.headers
+            .get(
+              "content-type"
+            ) || "",
+
+        sourceUrl:
+          url,
+      };
+    },
+
     "image"
   );
 }
+
+
+/* ============================================================
+   DIRECTORIES / JSON
+   ============================================================ */
 
 async function ensureDirs() {
   await Promise.all([
@@ -588,27 +855,111 @@ async function ensureDirs() {
   ]);
 }
 
-async function readArchive() {
-  try {
-    const data =
-      JSON.parse(
-        await fs.readFile(
-          ARCHIVE_PATH,
-          "utf8"
-        )
-      );
 
-    return (
-      data &&
-      typeof data ===
-        "object"
-    )
-      ? data
-      : {};
+async function readJson(
+  file,
+  fallback
+) {
+  try {
+    return JSON.parse(
+      await fs.readFile(
+        file,
+        "utf8"
+      )
+    );
   } catch {
-    return {};
+    return fallback;
   }
 }
+
+
+async function readArchive() {
+  const archive =
+    await readJson(
+      ARCHIVE_PATH,
+      {}
+    );
+
+  return (
+    archive &&
+    typeof archive ===
+      "object"
+  )
+    ? archive
+    : {};
+}
+
+
+/*
+ * operator-build-failures.json
+ * is already part of your GitHub
+ * Actions cache.
+ *
+ * We now use it as persistent retry
+ * state as well.
+ */
+async function readFailureState() {
+  const raw =
+    await readJson(
+      FAIL_PATH,
+      []
+    );
+
+  const map =
+    new Map();
+
+  if (
+    !Array.isArray(raw)
+  ) {
+    return map;
+  }
+
+  for (
+    const item of raw
+  ) {
+    const id =
+      Number(
+        item?.id
+      );
+
+    if (
+      !Number.isInteger(id) ||
+      id < 1 ||
+      id > SUPPLY
+    ) {
+      continue;
+    }
+
+    map.set(
+      id,
+      {
+        id,
+
+        attempts:
+          Math.max(
+            1,
+            Number(
+              item.attempts
+            ) || 1
+          ),
+
+        lastError:
+          String(
+            item.lastError ||
+            item.error ||
+            ""
+          ),
+
+        lastAttemptAt:
+          item.lastAttemptAt ||
+          null,
+      }
+    );
+  }
+
+  return map;
+}
+
 
 async function saveArchive(
   archive
@@ -625,66 +976,261 @@ async function saveArchive(
         .toISOString(),
 
     fullFormat:
-      "lossless-webp",
+      "webp",
 
     thumbnailFormat:
       "webp",
   };
 
+  const temp =
+    `${ARCHIVE_PATH}.tmp`;
+
   await fs.writeFile(
-    ARCHIVE_PATH,
+    temp,
+
     JSON.stringify(
       archive,
       null,
       2
-    ) + "\n"
+    ) + "\n",
+
+    "utf8"
+  );
+
+  await fs.rename(
+    temp,
+    ARCHIVE_PATH
   );
 }
 
-async function outputExists(
-  id
+
+async function saveFailureState(
+  failureState,
+  missingIds
+) {
+  const missing =
+    new Set(
+      missingIds
+    );
+
+  const rows =
+    [
+      ...failureState
+        .values(),
+    ]
+      .filter(
+        (item) =>
+          missing.has(
+            item.id
+          )
+      )
+      .sort(
+        (a, b) =>
+          a.id - b.id
+      );
+
+  const temp =
+    `${FAIL_PATH}.tmp`;
+
+  await fs.writeFile(
+    temp,
+
+    JSON.stringify(
+      rows,
+      null,
+      2
+    ) + "\n",
+
+    "utf8"
+  );
+
+  await fs.rename(
+    temp,
+    FAIL_PATH
+  );
+}
+
+
+/* ============================================================
+   OUTPUT VALIDATION
+   ============================================================ */
+
+async function fileReady(
+  file,
+  minBytes = 256
 ) {
   try {
-    await Promise.all([
-      fs.access(
-        path.join(
-          FULL_DIR,
-          `${pad(
-            id
-          )}.webp`
-        )
-      ),
+    const stat =
+      await fs.stat(
+        file
+      );
 
-      fs.access(
-        path.join(
-          THUMB_DIR,
-          `${pad(
-            id
-          )}.webp`
-        )
-      ),
-    ]);
-
-    return true;
+    return (
+      stat.isFile() &&
+      stat.size >=
+        minBytes
+    );
   } catch {
     return false;
   }
 }
 
+
+function fullPath(id) {
+  return path.join(
+    FULL_DIR,
+    `${pad(id)}.webp`
+  );
+}
+
+
+function thumbPath(id) {
+  return path.join(
+    THUMB_DIR,
+    `${pad(id)}.webp`
+  );
+}
+
+
+async function outputExists(id) {
+  const [
+    full,
+    thumb,
+  ] =
+    await Promise.all([
+      fileReady(
+        fullPath(id)
+      ),
+
+      fileReady(
+        thumbPath(id)
+      ),
+    ]);
+
+  return (
+    full &&
+    thumb
+  );
+}
+
+
+/* ============================================================
+   LOCAL REPAIR
+   ============================================================ */
+
+/*
+ * If a full image survived a canceled
+ * workflow but its thumbnail did not,
+ * rebuild the thumb locally rather
+ * than touching IPFS again.
+ */
+async function repairThumbnailFromFull(
+  id
+) {
+  const full =
+    fullPath(id);
+
+  const thumb =
+    thumbPath(id);
+
+  if (
+    !(await fileReady(full)) ||
+    (await fileReady(thumb))
+  ) {
+    return false;
+  }
+
+  const temp =
+    `${thumb}.tmp`;
+
+  await sharp(full)
+    .resize({
+      width:
+        360,
+
+      height:
+        360,
+
+      fit:
+        "inside",
+
+      withoutEnlargement:
+        true,
+
+      kernel:
+        sharp.kernel
+          .lanczos3,
+    })
+    .webp({
+      quality:
+        84,
+
+      effort:
+        4,
+    })
+    .toFile(
+      temp
+    );
+
+  await fs.rename(
+    temp,
+    thumb
+  );
+
+  return true;
+}
+
+
+/* ============================================================
+   IMAGE BUILD
+   ============================================================ */
+
 async function buildImages(
   id,
   imageUri
 ) {
+  if (
+    await repairThumbnailFromFull(
+      id
+    )
+  ) {
+    const meta =
+      await sharp(
+        fullPath(id)
+      )
+        .metadata();
+
+    return {
+      sourceUrl:
+        null,
+
+      mime:
+        "image/webp",
+
+      width:
+        meta.width ||
+        null,
+
+      height:
+        meta.height ||
+        null,
+
+      repairedLocally:
+        true,
+    };
+  }
+
   const {
     buffer,
     sourceUrl,
     mime,
   } =
     await fetchBinaryUri(
-      imageUri
+      imageUri,
+      id
     );
 
-  const base =
+  const input =
     sharp(
       buffer,
       {
@@ -694,54 +1240,75 @@ async function buildImages(
     ).rotate();
 
   const metadata =
-    await base.metadata();
+    await input
+      .metadata();
 
-  await base
+  /*
+   * Write to temporary files first.
+   *
+   * If GitHub kills a workflow during
+   * image conversion, the next run
+   * won't mistake a half-written file
+   * for a finished operator.
+   */
+  const fullTemp =
+    `${fullPath(id)}.tmp`;
+
+  const thumbTemp =
+    `${thumbPath(id)}.tmp`;
+
+  await input
     .clone()
     .webp({
       lossless:
         true,
+
       effort:
         4,
     })
     .toFile(
-      path.join(
-        FULL_DIR,
-        `${pad(
-          id
-        )}.webp`
-      )
+      fullTemp
     );
 
-  await base
+  await input
     .clone()
     .resize({
       width:
         360,
+
       height:
         360,
+
       fit:
         "inside",
+
       withoutEnlargement:
         true,
+
       kernel:
         sharp.kernel
           .lanczos3,
     })
     .webp({
       quality:
-        82,
+        84,
+
       effort:
         4,
     })
     .toFile(
-      path.join(
-        THUMB_DIR,
-        `${pad(
-          id
-        )}.webp`
-      )
+      thumbTemp
     );
+
+  await fs.rename(
+    fullTemp,
+    fullPath(id)
+  );
+
+  await fs.rename(
+    thumbTemp,
+    thumbPath(id)
+  );
 
   return {
     sourceUrl,
@@ -754,8 +1321,16 @@ async function buildImages(
     height:
       metadata.height ||
       null,
+
+    repairedLocally:
+      false,
   };
 }
+
+
+/* ============================================================
+   ATTRIBUTES
+   ============================================================ */
 
 function normalizeAttributes(
   attributes
@@ -792,6 +1367,11 @@ function normalizeAttributes(
     );
 }
 
+
+/* ============================================================
+   BUILD ONE OPERATOR
+   ============================================================ */
+
 async function buildOne(
   id,
   archive
@@ -799,22 +1379,112 @@ async function buildOne(
   const key =
     String(id);
 
+  const existing =
+    archive[key];
+
+  /*
+   * Fully complete local record.
+   */
   if (
     !FORCE &&
-    archive[key] &&
-    (await outputExists(
-      id
-    ))
+    existing &&
+    (await outputExists(id))
   ) {
     return {
       id,
+
       status:
         "cached",
+
       token:
-        archive[key],
+        existing,
     };
   }
 
+  /*
+   * Metadata already exists but image
+   * files are missing.
+   *
+   * Reuse canonicalImage so we don't
+   * repeat tokenURI + metadata calls.
+   */
+  if (
+    !FORCE &&
+    existing &&
+    typeof existing
+      .canonicalImage ===
+      "string" &&
+    existing.canonicalImage
+  ) {
+    const source =
+      await buildImages(
+        id,
+        existing
+          .canonicalImage
+      );
+
+    existing.thumbnail =
+      `/operators/thumbs/${pad(
+        id
+      )}.webp`;
+
+    existing.image =
+      `/operators/full/${pad(
+        id
+      )}.webp`;
+
+    existing.source = {
+      ...(
+        existing.source ||
+        {}
+      ),
+
+      resolvedImageUrl:
+        source.sourceUrl
+          ?.startsWith(
+            "data:"
+          )
+          ? null
+          : (
+              source.sourceUrl ||
+              existing.source
+                ?.resolvedImageUrl ||
+              null
+            ),
+
+      mime:
+        source.mime ||
+        existing.source
+          ?.mime ||
+        null,
+
+      width:
+        source.width,
+
+      height:
+        source.height,
+    };
+
+    archive[key] =
+      existing;
+
+    return {
+      id,
+
+      status:
+        source
+          .repairedLocally
+          ? "repaired"
+          : "image-rebuilt",
+
+      token:
+        existing,
+    };
+  }
+
+  /*
+   * Completely new operator.
+   */
   const tokenURI =
     await rpcTokenUri(
       id
@@ -822,7 +1492,8 @@ async function buildOne(
 
   const metadata =
     await fetchJsonUri(
-      tokenURI
+      tokenURI,
+      id
     );
 
   const imageUri =
@@ -884,12 +1555,14 @@ async function buildOne(
     source: {
       resolvedImageUrl:
         source.sourceUrl
-          .startsWith(
+          ?.startsWith(
             "data:"
           )
           ? null
-          : source
-              .sourceUrl,
+          : (
+              source.sourceUrl ||
+              null
+            ),
 
       mime:
         source.mime ||
@@ -908,22 +1581,24 @@ async function buildOne(
 
   return {
     id,
+
     status:
       "built",
+
     token,
   };
 }
+
+
+/* ============================================================
+   CONCURRENCY
+   ============================================================ */
 
 async function mapConcurrent(
   items,
   concurrency,
   worker
 ) {
-  const results =
-    new Array(
-      items.length
-    );
-
   let cursor =
     0;
 
@@ -939,11 +1614,10 @@ async function mapConcurrent(
         return;
       }
 
-      results[index] =
-        await worker(
-          items[index],
-          index
-        );
+      await worker(
+        items[index],
+        index
+      );
     }
   }
 
@@ -956,12 +1630,52 @@ async function mapConcurrent(
             items.length
           ),
       },
+
       () => runner()
     )
   );
-
-  return results;
 }
+
+
+/* ============================================================
+   MISSING RECORDS
+   ============================================================ */
+
+async function getMissingIds(
+  archive
+) {
+  const missing =
+    [];
+
+  for (
+    let id = 1;
+    id <= SUPPLY;
+    id++
+  ) {
+    if (
+      FORCE ||
+      !archive[
+        String(id)
+      ] ||
+      !(
+        await outputExists(
+          id
+        )
+      )
+    ) {
+      missing.push(
+        id
+      );
+    }
+  }
+
+  return missing;
+}
+
+
+/* ============================================================
+   MAIN
+   ============================================================ */
 
 async function main() {
   await ensureDirs();
@@ -969,50 +1683,59 @@ async function main() {
   const archive =
     await readArchive();
 
-  const failures =
-    [];
+  const failureState =
+    await readFailureState();
 
-  const allIds =
-    Array.from(
-      {
-        length:
-          SUPPLY,
-      },
-      (
-        _,
-        index
-      ) =>
-        index + 1
+  const missingBefore =
+    await getMissingIds(
+      archive
     );
 
-  const missingIds =
-    [];
-
-  for (
-    const id of allIds
-  ) {
-    const key =
-      String(id);
-
-    const complete =
-      archive[key] &&
-      (await outputExists(id));
-
-    if (
-      FORCE ||
-      !complete
-    ) {
-      missingIds.push(
-        id
-      );
-    }
-  }
-
+  /*
+   * CRITICAL IMPROVEMENT:
+   *
+   * Least-attempted operators go first.
+   *
+   * A handful of stubborn IDs can no
+   * longer occupy the first 50 slots
+   * forever and prevent the remaining
+   * collection from being attempted.
+   */
   const ids =
-    missingIds.slice(
-      0,
-      BATCH_SIZE
-    );
+    [
+      ...missingBefore,
+    ]
+      .sort(
+        (a, b) => {
+          const attemptsA =
+            failureState
+              .get(a)
+              ?.attempts ||
+            0;
+
+          const attemptsB =
+            failureState
+              .get(b)
+              ?.attempts ||
+            0;
+
+          if (
+            attemptsA !==
+            attemptsB
+          ) {
+            return (
+              attemptsA -
+              attemptsB
+            );
+          }
+
+          return a - b;
+        }
+      )
+      .slice(
+        0,
+        BATCH_SIZE
+      );
 
   console.log(
     "MLP STATIC ARCHIVE"
@@ -1035,7 +1758,11 @@ async function main() {
   );
 
   console.log(
-    `Missing before run: ${missingIds.length}`
+    `Retry rounds: ${RETRY_ROUNDS}`
+  );
+
+  console.log(
+    `Missing before run: ${missingBefore.length}`
   );
 
   console.log(
@@ -1066,18 +1793,21 @@ async function main() {
     console.log(
       "NO MISSING OPERATORS"
     );
-
-    console.log(
-      "Archive already appears complete."
-    );
   }
 
-  let completed =
+  let finished =
+    0;
+
+  let successes =
+    0;
+
+  let failuresThisRun =
     0;
 
   await mapConcurrent(
     ids,
     CONCURRENCY,
+
     async (id) => {
       try {
         const result =
@@ -1086,54 +1816,75 @@ async function main() {
             archive
           );
 
-        completed++;
+        finished++;
+        successes++;
 
-        const mark =
-          result.status ===
-          "cached"
-            ? "cache"
-            : "metadata ✓ image ✓ thumb ✓";
+        /*
+         * Success means previous failure
+         * history is no longer relevant.
+         */
+        failureState.delete(
+          id
+        );
 
         console.log(
           `[${pad(
-            completed
+            finished
           )}/${pad(
             ids.length
           )}] #${pad(
             id
-          )} ${mark}`
+          )} ${result.status} ✓`
         );
 
+        /*
+         * Save frequently.
+         *
+         * A canceled workflow should lose
+         * at most a handful of operators.
+         */
         if (
-          result.status ===
-          "built" &&
-          completed % 10 ===
-            0
+          successes %
+          5 ===
+          0
         ) {
           await saveArchive(
             archive
           );
         }
+      } catch (error) {
+        finished++;
+        failuresThisRun++;
 
-        return result;
-      } catch (
-        error
-      ) {
-        completed++;
+        const previous =
+          failureState
+            .get(id);
 
-        failures.push({
+        failureState.set(
           id,
+          {
+            id,
 
-          error:
-            error?.message ||
-            String(
-              error
-            ),
-        });
+            attempts:
+              (
+                previous
+                  ?.attempts ||
+                0
+              ) + 1,
+
+            lastError:
+              error?.message ||
+              String(error),
+
+            lastAttemptAt:
+              new Date()
+                .toISOString(),
+          }
+        );
 
         console.error(
           `[${pad(
-            completed
+            finished
           )}/${pad(
             ids.length
           )}] #${pad(
@@ -1143,59 +1894,38 @@ async function main() {
             error
           }`
         );
-
-        return null;
       }
     }
   );
 
+  /*
+   * Always persist what succeeded.
+   */
   await saveArchive(
     archive
   );
 
-  await fs.writeFile(
-    FAIL_PATH,
-    JSON.stringify(
-      failures,
-      null,
-      2
-    ) + "\n"
+  const missingAfter =
+    await getMissingIds(
+      archive
+    );
+
+  await saveFailureState(
+    failureState,
+    missingAfter
   );
 
   const records =
     Object.keys(
       archive
-    ).filter(
-      (key) =>
-        /^\d+$/.test(
-          key
-        )
-    ).length;
-
-  const imageChecks =
-    await Promise.all(
-      allIds.map(
-        async (id) => ({
-          id,
-
-          ok:
-            await outputExists(
-              id
-            ),
-        })
-      )
-    );
-
-  const missingImages =
-    imageChecks
+    )
       .filter(
-        (item) =>
-          !item.ok
+        (key) =>
+          /^\d+$/.test(
+            key
+          )
       )
-      .map(
-        (item) =>
-          item.id
-      );
+      .length;
 
   console.log("");
 
@@ -1204,10 +1934,10 @@ async function main() {
   );
 
   if (
+    missingAfter.length ===
+      0 &&
     records ===
-      SUPPLY &&
-    missingImages.length ===
-      0
+      SUPPLY
   ) {
     console.log(
       "ARCHIVE COMPLETE"
@@ -1233,31 +1963,16 @@ async function main() {
   );
 
   console.log(
-    `FAILED THIS RUN: ${failures.length}`
+    `SUCCEEDED THIS RUN: ${successes}`
   );
 
   console.log(
-    `MISSING IMAGE SETS: ${missingImages.length}`
+    `FAILED THIS RUN: ${failuresThisRun}`
   );
 
   console.log(
-    `REMAINING OPERATORS: ${missingImages.length}`
+    `REMAINING OPERATORS: ${missingAfter.length}`
   );
-
-  if (
-    failures.length
-  ) {
-    console.log(
-      `FAILED IDS THIS RUN: ${
-        failures
-          .map(
-            (item) =>
-              item.id
-          )
-          .join(", ")
-      }`
-    );
-  }
 
   console.log(
     `Details: ${
@@ -1285,6 +2000,7 @@ async function main() {
   process.exitCode =
     1;
 }
+
 
 main().catch(
   (error) => {
